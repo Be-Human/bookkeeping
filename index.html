@@ -316,6 +316,61 @@
             color: #ef4444;
         }
 
+        .category-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+            margin-left: 6px;
+        }
+
+        .category-tag.income {
+            background: #d1fae5;
+            color: #059669;
+        }
+
+        .category-tag.expense {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .month-group {
+            margin-bottom: 24px;
+        }
+
+        .month-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding: 10px 16px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 8px;
+        }
+
+        .month-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .month-summary {
+            display: flex;
+            gap: 16px;
+            font-size: 13px;
+        }
+
+        .month-income {
+            color: #10b981;
+            font-weight: 500;
+        }
+
+        .month-expense {
+            color: #ef4444;
+            font-weight: 500;
+        }
+
         .empty-state {
             text-align: center;
             padding: 40px 20px;
@@ -389,6 +444,12 @@
                         <input type="number" id="amount" step="0.01" min="0.01" placeholder="请输入金额" required>
                     </div>
                     <div class="form-group">
+                        <label for="category">分类</label>
+                        <select id="category" required>
+                            <option value="">请选择分类</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
                         <label for="description">描述</label>
                         <textarea id="description" placeholder="请输入描述信息"></textarea>
                     </div>
@@ -421,6 +482,12 @@
         let currentFilter = 'all';
         let currentType = 'income';
 
+        // 分类定义
+        const categories = {
+            income: ['工资', '兼职', '投资', '其他收入'],
+            expense: ['餐饮', '交通', '购物', '娱乐', '房租', '医疗', '其他支出']
+        };
+
         // DOM 元素
         const recordForm = document.getElementById('record-form');
         const recordList = document.getElementById('record-list');
@@ -428,6 +495,7 @@
         const totalIncome = document.getElementById('total-income');
         const totalExpense = document.getElementById('total-expense');
         const dateInput = document.getElementById('date');
+        const categorySelect = document.getElementById('category');
         const typeToggleButtons = document.querySelectorAll('.type-toggle button');
         const filterButtons = document.querySelectorAll('.filter-btn');
 
@@ -437,12 +505,27 @@
             const today = new Date().toISOString().split('T')[0];
             dateInput.value = today;
 
+            // 初始化分类选项
+            updateCategoryOptions();
+
             // 从 localStorage 加载数据
             loadRecords();
 
             // 渲染数据
             updateSummary();
             renderRecords();
+        }
+
+        // 更新分类选项
+        function updateCategoryOptions() {
+            categorySelect.innerHTML = '<option value="">请选择分类</option>';
+            const categoryList = categories[currentType];
+            categoryList.forEach(category => {
+                const option = document.createElement('option');
+                option.value = category;
+                option.textContent = category;
+                categorySelect.appendChild(option);
+            });
         }
 
         // 从 localStorage 加载记录
@@ -506,6 +589,36 @@
             return '¥' + amount.toFixed(2);
         }
 
+        // 获取月份键值
+        function getMonthKey(dateStr) {
+            const date = new Date(dateStr);
+            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        }
+
+        // 按月份分组记录
+        function groupRecordsByMonth(records) {
+            const groups = {};
+            records.forEach(record => {
+                const monthKey = getMonthKey(record.date);
+                if (!groups[monthKey]) {
+                    groups[monthKey] = {
+                        records: [],
+                        incomeTotal: 0,
+                        expenseTotal: 0,
+                        year: new Date(record.date).getFullYear(),
+                        month: new Date(record.date).getMonth() + 1
+                    };
+                }
+                groups[monthKey].records.push(record);
+                if (record.type === 'income') {
+                    groups[monthKey].incomeTotal += record.amount;
+                } else {
+                    groups[monthKey].expenseTotal += record.amount;
+                }
+            });
+            return Object.keys(groups).sort().reverse().map(key => groups[key]);
+        }
+
         // 渲染记录列表
         function renderRecords() {
             recordList.innerHTML = '';
@@ -521,9 +634,35 @@
                 return;
             }
 
-            filteredRecords.forEach(record => {
-                const recordItem = createRecordItem(record);
-                recordList.appendChild(recordItem);
+            // 按月份分组
+            const monthGroups = groupRecordsByMonth(filteredRecords);
+
+            monthGroups.forEach(group => {
+                // 创建月份分组容器
+                const monthGroup = document.createElement('div');
+                monthGroup.className = 'month-group';
+
+                // 创建月份头部
+                const monthHeader = document.createElement('div');
+                monthHeader.className = 'month-header';
+                monthHeader.innerHTML = `
+                    <div class="month-title">${group.year}年${group.month}月</div>
+                    <div class="month-summary">
+                        <span class="month-income">+${formatCurrency(group.incomeTotal)}</span>
+                        <span class="month-expense">-${formatCurrency(group.expenseTotal)}</span>
+                    </div>
+                `;
+                monthGroup.appendChild(monthHeader);
+
+                // 创建记录列表容器
+                const recordsContainer = document.createElement('div');
+                group.records.forEach(record => {
+                    const recordItem = createRecordItem(record);
+                    recordsContainer.appendChild(recordItem);
+                });
+                monthGroup.appendChild(recordsContainer);
+
+                recordList.appendChild(monthGroup);
             });
         }
 
@@ -548,12 +687,13 @@
             const icon = isIncome ? '+' : '-';
             const amountPrefix = isIncome ? '+' : '-';
             const description = record.description || (isIncome ? '收入' : '支出');
+            const category = record.category || (isIncome ? '其他收入' : '其他支出');
 
             item.innerHTML = `
                 <div class="record-info">
                     <div class="record-icon ${typeClass}">${icon}</div>
                     <div class="record-details">
-                        <h4>${description}</h4>
+                        <h4>${description}<span class="category-tag ${typeClass}">${category}</span></h4>
                         <p>${formatDate(record.date)}</p>
                     </div>
                 </div>
@@ -589,11 +729,17 @@
             e.preventDefault();
 
             const amount = document.getElementById('amount').value;
+            const category = document.getElementById('category').value;
             const description = document.getElementById('description').value.trim();
             const date = document.getElementById('date').value;
 
             if (!amount || amount <= 0) {
                 alert('请输入有效的金额');
+                return;
+            }
+
+            if (!category) {
+                alert('请选择分类');
                 return;
             }
 
@@ -605,6 +751,7 @@
             const record = {
                 type: currentType,
                 amount: amount,
+                category: category,
                 description: description,
                 date: date
             };
@@ -616,6 +763,7 @@
             dateInput.value = new Date().toISOString().split('T')[0];
             currentType = 'income';
             updateTypeButtons();
+            updateCategoryOptions();
         });
 
         // 类型切换按钮
@@ -623,6 +771,7 @@
             button.addEventListener('click', () => {
                 currentType = button.dataset.type;
                 updateTypeButtons();
+                updateCategoryOptions();
             });
         });
 
