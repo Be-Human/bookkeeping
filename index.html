@@ -488,6 +488,8 @@
             min-width: 250px;
             max-height: 300px;
             overflow-y: auto;
+            overflow-x: hidden;
+            padding-right: 10px;
         }
 
         .legend-item {
@@ -499,11 +501,12 @@
             background: #f9fafb;
             border-radius: 10px;
             transition: all 0.3s ease;
+            border: 2px solid transparent;
         }
 
         .legend-item:hover {
             background: #f3f4f6;
-            transform: translateX(5px);
+            border-color: #667eea;
         }
 
         .legend-left {
@@ -576,6 +579,58 @@
         .chart-empty-state .empty-text {
             font-size: 14px;
             color: #888;
+        }
+
+        .chart-tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            pointer-events: none;
+            z-index: 100;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            white-space: nowrap;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .chart-tooltip.show {
+            opacity: 1;
+        }
+
+        .chart-tooltip::before {
+            content: '';
+            position: absolute;
+            bottom: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 6px solid rgba(0, 0, 0, 0.85);
+        }
+
+        .tooltip-title {
+            font-weight: 600;
+            margin-bottom: 6px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .tooltip-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            margin-top: 4px;
+        }
+
+        .tooltip-label {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .tooltip-value {
+            font-weight: 500;
         }
     </style>
 </head>
@@ -661,6 +716,17 @@
                         <div class="total-label">总计</div>
                         <div class="total-amount" id="chart-total">¥0.00</div>
                     </div>
+                    <div class="chart-tooltip" id="chart-tooltip">
+                        <div class="tooltip-title" id="tooltip-title"></div>
+                        <div class="tooltip-row">
+                            <span class="tooltip-label">金额</span>
+                            <span class="tooltip-value" id="tooltip-amount"></span>
+                        </div>
+                        <div class="tooltip-row">
+                            <span class="tooltip-label">占比</span>
+                            <span class="tooltip-value" id="tooltip-percent"></span>
+                        </div>
+                    </div>
                 </div>
                 <div class="legend-container" id="legend-container">
                     <!-- 图例将通过 JavaScript 动态生成 -->
@@ -701,6 +767,10 @@
         const chartContainer = document.getElementById('chart-container');
         const chartCenterText = document.getElementById('chart-center-text');
         const chartTotal = document.getElementById('chart-total');
+        let chartTooltip = document.getElementById('chart-tooltip');
+        let tooltipTitle = document.getElementById('tooltip-title');
+        let tooltipAmount = document.getElementById('tooltip-amount');
+        let tooltipPercent = document.getElementById('tooltip-percent');
 
         // 图表颜色
         const chartColors = [
@@ -709,6 +779,10 @@
             '#43e97b', '#38f9d7', '#fa709a', '#fee140',
             '#30cfd0', '#330867', '#ff6a88', '#ff99ac'
         ];
+
+        // 悬停状态
+        let hoveredSliceIndex = -1;
+        let currentChartData = null;
 
         // 初始化
         function init() {
@@ -1108,6 +1182,7 @@
             const centerY = size / 2;
             const radius = size / 2 - 20;
             const innerRadius = radius * 0.6;
+            const hoverOffset = 10; // 悬停时向外扩展的距离
 
             // 清除画布
             ctx.clearRect(0, 0, size, size);
@@ -1124,35 +1199,96 @@
                 return;
             }
 
-            // 绘制饼图
+            // 保存每个扇区的角度信息，用于检测鼠标悬停
+            data.slices = [];
             let startAngle = -Math.PI / 2; // 从顶部开始
 
+            // 首先绘制非悬停的扇区
             data.data.forEach((item, index) => {
                 const sliceAngle = (item.percentage / 100) * Math.PI * 2;
                 const endAngle = startAngle + sliceAngle;
                 const color = chartColors[index % chartColors.length];
 
-                // 绘制扇形
-                ctx.beginPath();
-                ctx.moveTo(centerX, centerY);
-                ctx.arc(centerX, centerY, radius, startAngle, endAngle);
-                ctx.closePath();
-                ctx.fillStyle = color;
-                ctx.fill();
+                // 保存扇区信息
+                data.slices.push({
+                    index: index,
+                    startAngle: startAngle,
+                    endAngle: endAngle,
+                    item: item,
+                    color: color
+                });
 
-                // 添加描边
-                ctx.strokeStyle = '#fff';
-                ctx.lineWidth = 2;
-                ctx.stroke();
+                // 如果不是当前悬停的扇区，先绘制
+                if (index !== hoveredSliceIndex) {
+                    // 绘制扇形
+                    ctx.beginPath();
+                    ctx.moveTo(centerX, centerY);
+                    ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+                    ctx.closePath();
+                    ctx.fillStyle = color;
+                    ctx.fill();
+
+                    // 添加描边
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
 
                 startAngle = endAngle;
             });
+
+            // 然后绘制悬停的扇区（如果有），使其显示在最上层
+            if (hoveredSliceIndex >= 0 && hoveredSliceIndex < data.slices.length) {
+                const slice = data.slices[hoveredSliceIndex];
+                const midAngle = (slice.startAngle + slice.endAngle) / 2;
+                const offsetX = Math.cos(midAngle) * hoverOffset;
+                const offsetY = Math.sin(midAngle) * hoverOffset;
+
+                // 绘制悬停扇区（向外扩展）
+                ctx.beginPath();
+                ctx.moveTo(centerX + offsetX, centerY + offsetY);
+                ctx.arc(centerX + offsetX, centerY + offsetY, radius, slice.startAngle, slice.endAngle);
+                ctx.closePath();
+                ctx.fillStyle = slice.color;
+                ctx.fill();
+
+                // 添加描边（更粗一些，突出显示）
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                // 添加阴影效果
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+                ctx.shadowBlur = 15;
+                ctx.shadowOffsetX = offsetX * 0.3;
+                ctx.shadowOffsetY = offsetY * 0.3;
+
+                // 重新绘制一次以应用阴影
+                ctx.beginPath();
+                ctx.moveTo(centerX + offsetX, centerY + offsetY);
+                ctx.arc(centerX + offsetX, centerY + offsetY, radius, slice.startAngle, slice.endAngle);
+                ctx.closePath();
+                ctx.fillStyle = slice.color;
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                // 重置阴影
+                ctx.shadowColor = 'transparent';
+                ctx.shadowBlur = 0;
+                ctx.shadowOffsetX = 0;
+                ctx.shadowOffsetY = 0;
+            }
 
             // 绘制内圆（空心效果）
             ctx.beginPath();
             ctx.arc(centerX, centerY, innerRadius, 0, Math.PI * 2);
             ctx.fillStyle = '#fff';
             ctx.fill();
+
+            // 保存当前数据用于鼠标检测
+            currentChartData = data;
         }
 
         // 渲染图例
@@ -1217,6 +1353,17 @@
                             <div class="total-label">总计</div>
                             <div class="total-amount" id="chart-total">¥0.00</div>
                         </div>
+                        <div class="chart-tooltip" id="chart-tooltip">
+                            <div class="tooltip-title" id="tooltip-title"></div>
+                            <div class="tooltip-row">
+                                <span class="tooltip-label">金额</span>
+                                <span class="tooltip-value" id="tooltip-amount"></span>
+                            </div>
+                            <div class="tooltip-row">
+                                <span class="tooltip-label">占比</span>
+                                <span class="tooltip-value" id="tooltip-percent"></span>
+                            </div>
+                        </div>
                     </div>
                     <div class="legend-container" id="legend-container">
                         <!-- 图例将通过 JavaScript 动态生成 -->
@@ -1227,6 +1374,10 @@
                 window.legendContainer = document.getElementById('legend-container');
                 window.chartCenterText = document.getElementById('chart-center-text');
                 window.chartTotal = document.getElementById('chart-total');
+                window.chartTooltip = document.getElementById('chart-tooltip');
+                window.tooltipTitle = document.getElementById('tooltip-title');
+                window.tooltipAmount = document.getElementById('tooltip-amount');
+                window.tooltipPercent = document.getElementById('tooltip-percent');
             }
 
             if (categoryData.data.length === 0 || categoryData.total === 0) {
@@ -1340,7 +1491,192 @@
             });
         }
 
+        // 检测鼠标是否在饼图扇区内
+        function getHoveredSliceIndex(mouseX, mouseY) {
+            if (!currentChartData || !currentChartData.slices) {
+                return -1;
+            }
+
+            const canvas = pieChartCanvas;
+            const rect = canvas.getBoundingClientRect();
+            const size = 300;
+            const centerX = size / 2;
+            const centerY = size / 2;
+            const radius = size / 2 - 20;
+            const innerRadius = radius * 0.6;
+
+            // 计算鼠标相对于 canvas 中心的位置
+            const x = mouseX - rect.left - centerX;
+            const y = mouseY - rect.top - centerY;
+
+            // 计算距离中心的距离
+            const distance = Math.sqrt(x * x + y * y);
+
+            // 检查是否在内圆和外圆之间
+            if (distance < innerRadius || distance > radius) {
+                return -1;
+            }
+
+            // 计算角度（从 -PI/2 开始，顺时针）
+            let angle = Math.atan2(y, x);
+            if (angle < -Math.PI / 2) {
+                angle += Math.PI * 2;
+            }
+
+            // 检查每个扇区
+            for (let i = 0; i < currentChartData.slices.length; i++) {
+                const slice = currentChartData.slices[i];
+                let startAngle = slice.startAngle;
+                let endAngle = slice.endAngle;
+
+                // 处理角度环绕的情况
+                if (startAngle < -Math.PI / 2) {
+                    startAngle += Math.PI * 2;
+                }
+                if (endAngle < -Math.PI / 2) {
+                    endAngle += Math.PI * 2;
+                }
+
+                // 检查角度是否在扇区范围内
+                if (angle >= startAngle && angle < endAngle) {
+                    return i;
+                }
+
+                // 处理跨越 -PI/2 的扇区
+                if (startAngle > endAngle) {
+                    if (angle >= startAngle || angle < endAngle) {
+                        return i;
+                    }
+                }
+            }
+
+            return -1;
+        }
+
+        // 显示浮层
+        function showTooltip(slice, mouseX, mouseY) {
+            if (!chartTooltip || !tooltipTitle || !tooltipAmount || !tooltipPercent) {
+                return;
+            }
+
+            // 设置浮层内容
+            tooltipTitle.textContent = slice.item.name;
+            tooltipAmount.textContent = formatCurrency(slice.item.amount);
+            tooltipPercent.textContent = slice.item.percentage.toFixed(1) + '%';
+
+            // 显示浮层
+            chartTooltip.classList.add('show');
+
+            // 计算浮层位置
+            const canvas = pieChartCanvas;
+            const canvasRect = canvas.getBoundingClientRect();
+            const wrapperRect = canvas.parentElement.getBoundingClientRect();
+
+            // 获取浮层尺寸
+            const tooltipRect = chartTooltip.getBoundingClientRect();
+            const tooltipWidth = tooltipRect.width || 150;
+            const tooltipHeight = tooltipRect.height || 80;
+
+            // 计算位置：在鼠标位置上方居中
+            let left = mouseX - wrapperRect.left - tooltipWidth / 2;
+            let top = mouseY - wrapperRect.top - tooltipHeight - 15;
+
+            // 边界检查
+            if (left < 5) {
+                left = 5;
+            }
+            if (left + tooltipWidth > wrapperRect.width - 5) {
+                left = wrapperRect.width - tooltipWidth - 5;
+            }
+            if (top < 5) {
+                // 如果太靠上，显示在鼠标下方
+                top = mouseY - wrapperRect.top + 20;
+            }
+
+            chartTooltip.style.left = left + 'px';
+            chartTooltip.style.top = top + 'px';
+        }
+
+        // 隐藏浮层
+        function hideTooltip() {
+            if (chartTooltip) {
+                chartTooltip.classList.remove('show');
+            }
+        }
+
+        // 饼图鼠标移动事件
+        function handleChartMouseMove(e) {
+            if (!pieChartCanvas) {
+                return;
+            }
+
+            const mouseX = e.clientX;
+            const mouseY = e.clientY;
+
+            // 获取悬停的扇区索引
+            const newHoveredIndex = getHoveredSliceIndex(mouseX, mouseY);
+
+            // 如果悬停索引变化了
+            if (newHoveredIndex !== hoveredSliceIndex) {
+                hoveredSliceIndex = newHoveredIndex;
+
+                // 重新绘制饼图
+                if (currentChartData) {
+                    drawPieChart(currentChartData);
+                }
+
+                // 显示或隐藏浮层
+                if (hoveredSliceIndex >= 0 && currentChartData && currentChartData.slices) {
+                    const slice = currentChartData.slices[hoveredSliceIndex];
+                    showTooltip(slice, mouseX, mouseY);
+                } else {
+                    hideTooltip();
+                }
+            } else if (hoveredSliceIndex >= 0 && currentChartData && currentChartData.slices) {
+                // 如果悬停索引没变，只更新浮层位置
+                const slice = currentChartData.slices[hoveredSliceIndex];
+                showTooltip(slice, mouseX, mouseY);
+            }
+        }
+
+        // 饼图鼠标离开事件
+        function handleChartMouseLeave() {
+            if (hoveredSliceIndex >= 0) {
+                hoveredSliceIndex = -1;
+                hideTooltip();
+                if (currentChartData) {
+                    drawPieChart(currentChartData);
+                }
+            }
+        }
+
+        // 初始化图表事件监听
+        function initChartEvents() {
+            // 使用事件委托，因为 canvas 可能会被重新创建
+            document.addEventListener('mousemove', (e) => {
+                // 检查目标是否在 canvas 内
+                const target = e.target;
+                if (target.id === 'pie-chart' || (target.closest && target.closest('#pie-chart'))) {
+                    handleChartMouseMove(e);
+                } else if (hoveredSliceIndex >= 0) {
+                    // 检查鼠标是否还在 chart-wrapper 内
+                    const chartWrapper = document.querySelector('.chart-wrapper');
+                    if (chartWrapper) {
+                        const rect = chartWrapper.getBoundingClientRect();
+                        if (e.clientX < rect.left || e.clientX > rect.right ||
+                            e.clientY < rect.top || e.clientY > rect.bottom) {
+                            handleChartMouseLeave();
+                        }
+                    }
+                }
+            });
+
+            // 鼠标离开时隐藏浮层
+            document.addEventListener('mouseleave', handleChartMouseLeave);
+        }
+
         // 启动应用
+        initChartEvents();
         init();
     </script>
 </body>
