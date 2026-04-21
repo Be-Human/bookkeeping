@@ -431,6 +431,152 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #a1a1a1;
         }
+
+        .chart-section {
+            margin-top: 30px;
+        }
+
+        .chart-container {
+            display: flex;
+            align-items: flex-start;
+            gap: 40px;
+            flex-wrap: wrap;
+        }
+
+        @media (max-width: 768px) {
+            .chart-container {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+
+        .chart-wrapper {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            flex-shrink: 0;
+        }
+
+        #pie-chart {
+            width: 100%;
+            height: 100%;
+        }
+
+        .chart-center-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            pointer-events: none;
+        }
+
+        .chart-center-text .total-label {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 4px;
+        }
+
+        .chart-center-text .total-amount {
+            font-size: 20px;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .legend-container {
+            flex: 1;
+            min-width: 250px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            background: #f9fafb;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .legend-item:hover {
+            background: #f3f4f6;
+            transform: translateX(5px);
+        }
+
+        .legend-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .legend-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .legend-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+
+        .legend-amount {
+            font-size: 14px;
+            font-weight: 600;
+            color: #555;
+            white-space: nowrap;
+        }
+
+        .legend-percent {
+            font-size: 13px;
+            color: #888;
+            white-space: nowrap;
+        }
+
+        .chart-empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            padding: 60px 20px;
+            text-align: center;
+            color: #888;
+        }
+
+        .chart-empty-state .empty-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .chart-empty-state .empty-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #555;
+        }
+
+        .chart-empty-state .empty-text {
+            font-size: 14px;
+            color: #888;
+        }
     </style>
 </head>
 <body>
@@ -504,6 +650,23 @@
                 </div>
             </div>
         </div>
+
+        <!-- 图表区域 -->
+        <div class="card chart-section">
+            <h2 class="card-title">📊 分类统计</h2>
+            <div class="chart-container" id="chart-container">
+                <div class="chart-wrapper">
+                    <canvas id="pie-chart"></canvas>
+                    <div class="chart-center-text" id="chart-center-text" style="display: none;">
+                        <div class="total-label">总计</div>
+                        <div class="total-amount" id="chart-total">¥0.00</div>
+                    </div>
+                </div>
+                <div class="legend-container" id="legend-container">
+                    <!-- 图例将通过 JavaScript 动态生成 -->
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -533,6 +696,19 @@
         const filterSection = document.querySelector('.filter-section');
         const typeToggleButtons = document.querySelectorAll('.type-toggle button');
         const filterButtons = document.querySelectorAll('.filter-btn');
+        const pieChartCanvas = document.getElementById('pie-chart');
+        const legendContainer = document.getElementById('legend-container');
+        const chartContainer = document.getElementById('chart-container');
+        const chartCenterText = document.getElementById('chart-center-text');
+        const chartTotal = document.getElementById('chart-total');
+
+        // 图表颜色
+        const chartColors = [
+            '#667eea', '#764ba2', '#f093fb', '#f5576c',
+            '#4facfe', '#00f2fe', '#fa709a', '#fee140',
+            '#43e97b', '#38f9d7', '#fa709a', '#fee140',
+            '#30cfd0', '#330867', '#ff6a88', '#ff99ac'
+        ];
 
         // 初始化
         function init() {
@@ -550,6 +726,7 @@
             updateSummary();
             renderCategoryFilters();
             renderRecords();
+            updateChart();
         }
 
         // 更新分类选项
@@ -588,6 +765,7 @@
             saveRecords();
             updateSummary();
             renderRecords();
+            updateChart();
         }
 
         // 删除记录
@@ -597,6 +775,7 @@
                 saveRecords();
                 updateSummary();
                 renderRecords();
+                updateChart();
             }
         }
 
@@ -797,6 +976,7 @@
                     currentCategory = category;
                     updateFilterButtons();
                     renderRecords();
+                    updateChart();
                 });
 
                 filterSection.appendChild(btn);
@@ -857,6 +1037,212 @@
             const month = date.getMonth() + 1;
             const day = date.getDate();
             return `${year}年${month}月${day}日`;
+        }
+
+        // 获取筛选后的记录（用于图表）
+        function getFilteredRecordsForChart() {
+            let filteredRecords = records;
+            
+            // 先按类型筛选
+            if (currentFilter !== 'all') {
+                filteredRecords = filteredRecords.filter(record => record.type === currentFilter);
+            }
+
+            // 再按分类筛选
+            if (currentCategory !== 'all') {
+                filteredRecords = filteredRecords.filter(record => record.category === currentCategory);
+            }
+
+            return filteredRecords;
+        }
+
+        // 按分类汇总金额
+        function aggregateByCategory(records) {
+            const categoryData = {};
+            let totalAmount = 0;
+
+            records.forEach(record => {
+                const category = record.category || (record.type === 'income' ? '其他收入' : '其他支出');
+                const amount = record.amount;
+                
+                if (!categoryData[category]) {
+                    categoryData[category] = {
+                        name: category,
+                        amount: 0,
+                        type: record.type
+                    };
+                }
+                categoryData[category].amount += amount;
+                totalAmount += amount;
+            });
+
+            // 转换为数组并按金额排序
+            const dataArray = Object.values(categoryData).sort((a, b) => b.amount - a.amount);
+
+            // 计算百分比
+            dataArray.forEach(item => {
+                item.percentage = totalAmount > 0 ? (item.amount / totalAmount) * 100 : 0;
+            });
+
+            return {
+                data: dataArray,
+                total: totalAmount
+            };
+        }
+
+        // 绘制饼图
+        function drawPieChart(data) {
+            const canvas = pieChartCanvas;
+            const ctx = canvas.getContext('2d');
+            
+            // 设置 canvas 尺寸（考虑高 DPI 屏幕）
+            const dpr = window.devicePixelRatio || 1;
+            const size = 300;
+            canvas.width = size * dpr;
+            canvas.height = size * dpr;
+            canvas.style.width = size + 'px';
+            canvas.style.height = size + 'px';
+            ctx.scale(dpr, dpr);
+
+            const centerX = size / 2;
+            const centerY = size / 2;
+            const radius = size / 2 - 20;
+            const innerRadius = radius * 0.6;
+
+            // 清除画布
+            ctx.clearRect(0, 0, size, size);
+
+            if (data.data.length === 0 || data.total === 0) {
+                // 绘制空状态圆环
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+                ctx.strokeStyle = '#e0e0e0';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                return;
+            }
+
+            // 绘制饼图
+            let startAngle = -Math.PI / 2; // 从顶部开始
+
+            data.data.forEach((item, index) => {
+                const sliceAngle = (item.percentage / 100) * Math.PI * 2;
+                const endAngle = startAngle + sliceAngle;
+                const color = chartColors[index % chartColors.length];
+
+                // 绘制扇形
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+                ctx.closePath();
+                ctx.fillStyle = color;
+                ctx.fill();
+
+                // 添加描边
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                startAngle = endAngle;
+            });
+
+            // 绘制内圆（空心效果）
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, innerRadius, 0, Math.PI * 2);
+            ctx.fillStyle = '#fff';
+            ctx.fill();
+        }
+
+        // 渲染图例
+        function renderLegend(data) {
+            legendContainer.innerHTML = '';
+
+            if (data.data.length === 0) {
+                return;
+            }
+
+            data.data.forEach((item, index) => {
+                const color = chartColors[index % chartColors.length];
+                const legendItem = document.createElement('div');
+                legendItem.className = 'legend-item';
+
+                legendItem.innerHTML = `
+                    <div class="legend-left">
+                        <div class="legend-color" style="background-color: ${color};"></div>
+                        <span class="legend-name">${item.name}</span>
+                    </div>
+                    <div class="legend-right">
+                        <span class="legend-amount">${formatCurrency(item.amount)}</span>
+                        <span class="legend-percent">${item.percentage.toFixed(1)}%</span>
+                    </div>
+                `;
+
+                legendContainer.appendChild(legendItem);
+            });
+        }
+
+        // 渲染图表空状态
+        function renderChartEmptyState() {
+            // 清除现有内容
+            legendContainer.innerHTML = '';
+            chartCenterText.style.display = 'none';
+
+            // 显示空状态
+            const emptyState = document.createElement('div');
+            emptyState.className = 'chart-empty-state';
+            emptyState.innerHTML = `
+                <div class="empty-icon">📊</div>
+                <div class="empty-title">暂无数据</div>
+                <div class="empty-text">当前筛选范围内没有记录，图表无法显示</div>
+            `;
+
+            // 替换图表容器内容
+            chartContainer.innerHTML = '';
+            chartContainer.appendChild(emptyState);
+        }
+
+        // 更新图表
+        function updateChart() {
+            const filteredRecords = getFilteredRecordsForChart();
+            const categoryData = aggregateByCategory(filteredRecords);
+
+            // 恢复图表容器的原始结构（如果之前显示了空状态）
+            if (!chartContainer.querySelector('.chart-wrapper')) {
+                chartContainer.innerHTML = `
+                    <div class="chart-wrapper">
+                        <canvas id="pie-chart"></canvas>
+                        <div class="chart-center-text" id="chart-center-text" style="display: none;">
+                            <div class="total-label">总计</div>
+                            <div class="total-amount" id="chart-total">¥0.00</div>
+                        </div>
+                    </div>
+                    <div class="legend-container" id="legend-container">
+                        <!-- 图例将通过 JavaScript 动态生成 -->
+                    </div>
+                `;
+                // 重新获取 DOM 元素引用
+                window.pieChartCanvas = document.getElementById('pie-chart');
+                window.legendContainer = document.getElementById('legend-container');
+                window.chartCenterText = document.getElementById('chart-center-text');
+                window.chartTotal = document.getElementById('chart-total');
+            }
+
+            if (categoryData.data.length === 0 || categoryData.total === 0) {
+                renderChartEmptyState();
+                return;
+            }
+
+            // 绘制饼图
+            drawPieChart(categoryData);
+
+            // 渲染图例
+            renderLegend(categoryData);
+
+            // 显示中心总计
+            chartCenterText.style.display = 'block';
+            chartTotal.textContent = formatCurrency(categoryData.total);
         }
 
         // 事件监听
@@ -930,6 +1316,7 @@
                 currentCategory = 'all';
                 updateFilterButtons();
                 renderRecords();
+                updateChart();
             });
         });
 
