@@ -221,6 +221,36 @@
             color: white;
         }
 
+        .btn-edit {
+            background: #dbeafe;
+            color: #2563eb;
+            padding: 8px 12px;
+            font-size: 12px;
+            margin-right: 8px;
+        }
+
+        .btn-edit:hover {
+            background: #2563eb;
+            color: white;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
         .filter-section {
             display: flex;
             gap: 10px;
@@ -735,6 +765,45 @@
         </div>
     </div>
 
+    <!-- 编辑弹窗 -->
+    <div id="edit-modal" class="modal">
+        <div class="card" style="width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto;">
+            <h2 class="card-title">✏️ 编辑记录</h2>
+            <form id="edit-form">
+                <input type="hidden" id="edit-id">
+                <div class="form-group">
+                    <label>收支类型</label>
+                    <div class="type-toggle">
+                        <button type="button" class="income active" data-type="income">收入</button>
+                        <button type="button" class="expense" data-type="expense">支出</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="edit-amount">金额 (¥)</label>
+                    <input type="number" id="edit-amount" step="0.01" min="0.01" placeholder="请输入金额" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-category">分类</label>
+                    <select id="edit-category" required>
+                        <option value="">请选择分类</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="edit-description">描述</label>
+                    <textarea id="edit-description" placeholder="请输入描述信息"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="edit-date">日期</label>
+                    <input type="date" id="edit-date" required>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">保存修改</button>
+                    <button type="button" class="btn" id="cancel-edit" style="flex: 1; background: #f3f4f6; color: #333;">取消</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         // 数据管理
         let records = [];
@@ -851,6 +920,74 @@
                 renderRecords();
                 updateChart();
             }
+        }
+
+        // 打开编辑弹窗
+        function openEditModal(id) {
+            const record = records.find(r => r.id === id);
+            if (!record) return;
+
+            // 填充表单数据
+            document.getElementById('edit-id').value = record.id;
+            document.getElementById('edit-amount').value = record.amount;
+            document.getElementById('edit-description').value = record.description || '';
+            document.getElementById('edit-date').value = record.date;
+
+            // 设置当前编辑类型
+            const editTypeButtons = document.querySelectorAll('#edit-modal .type-toggle button');
+            editTypeButtons.forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.type === record.type) {
+                    btn.classList.add('active');
+                }
+            });
+
+            // 更新分类选项
+            updateEditCategoryOptions(record.type);
+
+            // 选中当前分类
+            setTimeout(() => {
+                document.getElementById('edit-category').value = record.category;
+            }, 0);
+
+            // 显示弹窗
+            document.getElementById('edit-modal').classList.add('active');
+        }
+
+        // 关闭编辑弹窗
+        function closeEditModal() {
+            document.getElementById('edit-modal').classList.remove('active');
+            document.getElementById('edit-form').reset();
+        }
+
+        // 更新编辑弹窗的分类选项
+        function updateEditCategoryOptions(type) {
+            const editCategorySelect = document.getElementById('edit-category');
+            editCategorySelect.innerHTML = '<option value="">请选择分类</option>';
+            const categoryList = categories[type];
+            categoryList.forEach(category => {
+                const option = document.createElement('option');
+                option.value = category;
+                option.textContent = category;
+                editCategorySelect.appendChild(option);
+            });
+        }
+
+        // 更新记录
+        function updateRecord(id, updatedData) {
+            const recordIndex = records.findIndex(r => r.id === id);
+            if (recordIndex === -1) return;
+
+            records[recordIndex] = {
+                ...records[recordIndex],
+                ...updatedData,
+                amount: parseFloat(updatedData.amount)
+            };
+
+            saveRecords();
+            updateSummary();
+            renderRecords();
+            updateChart();
         }
 
         // 更新汇总信息
@@ -1090,9 +1227,17 @@
                 </div>
                 <div class="record-amount ${typeClass}">
                     ${amountPrefix}${formatCurrency(record.amount).substring(1)}
+                    <button class="btn btn-edit" data-id="${record.id}">编辑</button>
                     <button class="btn btn-delete" data-id="${record.id}">删除</button>
                 </div>
             `;
+
+            // 添加编辑按钮事件
+            const editBtn = item.querySelector('.btn-edit');
+            editBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                openEditModal(record.id);
+            });
 
             // 添加删除按钮事件
             const deleteBtn = item.querySelector('.btn-delete');
@@ -1490,6 +1635,87 @@
                 }
             });
         }
+
+        // 编辑弹窗事件监听
+        const editForm = document.getElementById('edit-form');
+        const cancelEditBtn = document.getElementById('cancel-edit');
+        const editModal = document.getElementById('edit-modal');
+
+        // 编辑表单提交
+        if (editForm) {
+            editForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+
+                const id = document.getElementById('edit-id').value;
+                const amount = document.getElementById('edit-amount').value;
+                const category = document.getElementById('edit-category').value;
+                const description = document.getElementById('edit-description').value.trim();
+                const date = document.getElementById('edit-date').value;
+
+                // 获取当前选中的类型
+                const activeTypeBtn = editModal.querySelector('.type-toggle button.active');
+                const type = activeTypeBtn ? activeTypeBtn.dataset.type : 'expense';
+
+                if (!amount || amount <= 0) {
+                    alert('请输入有效的金额');
+                    return;
+                }
+
+                if (!category) {
+                    alert('请选择分类');
+                    return;
+                }
+
+                if (!date) {
+                    alert('请选择日期');
+                    return;
+                }
+
+                const updatedData = {
+                    type: type,
+                    amount: amount,
+                    category: category,
+                    description: description,
+                    date: date
+                };
+
+                updateRecord(id, updatedData);
+                closeEditModal();
+            });
+        }
+
+        // 取消编辑
+        if (cancelEditBtn) {
+            cancelEditBtn.addEventListener('click', closeEditModal);
+        }
+
+        // 点击弹窗外部关闭
+        if (editModal) {
+            editModal.addEventListener('click', (e) => {
+                if (e.target === editModal) {
+                    closeEditModal();
+                }
+            });
+        }
+
+        // 编辑弹窗中的类型切换按钮
+        function initEditTypeButtons() {
+            const editTypeButtons = document.querySelectorAll('#edit-modal .type-toggle button');
+            editTypeButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    // 更新按钮状态
+                    editTypeButtons.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+
+                    // 更新分类选项
+                    const type = button.dataset.type;
+                    updateEditCategoryOptions(type);
+                });
+            });
+        }
+
+        // 初始化编辑弹窗类型切换按钮
+        initEditTypeButtons();
 
         // 检测鼠标是否在饼图扇区内
         function getHoveredSliceIndex(mouseX, mouseY) {
