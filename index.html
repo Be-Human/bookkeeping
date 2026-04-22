@@ -251,6 +251,23 @@
             display: flex;
         }
 
+        .error-message {
+            color: #ef4444;
+            font-size: 12px;
+            margin-top: 4px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .form-group.has-error input,
+        .form-group.has-error select,
+        .form-group.has-error textarea {
+            border-color: #ef4444;
+        }
+
         .filter-section {
             display: flex;
             gap: 10px;
@@ -769,7 +786,7 @@
     <div id="edit-modal" class="modal">
         <div class="card" style="width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto;">
             <h2 class="card-title">✏️ 编辑记录</h2>
-            <form id="edit-form">
+            <form id="edit-form" novalidate>
                 <input type="hidden" id="edit-id">
                 <div class="form-group">
                     <label>收支类型</label>
@@ -781,12 +798,14 @@
                 <div class="form-group">
                     <label for="edit-amount">金额 (¥)</label>
                     <input type="number" id="edit-amount" step="0.01" min="0.01" placeholder="请输入金额" required>
+                    <div class="error-message" id="edit-amount-error"></div>
                 </div>
                 <div class="form-group">
                     <label for="edit-category">分类</label>
                     <select id="edit-category" required>
                         <option value="">请选择分类</option>
                     </select>
+                    <div class="error-message" id="edit-category-error"></div>
                 </div>
                 <div class="form-group">
                     <label for="edit-description">描述</label>
@@ -795,6 +814,7 @@
                 <div class="form-group">
                     <label for="edit-date">日期</label>
                     <input type="date" id="edit-date" required>
+                    <div class="error-message" id="edit-date-error"></div>
                 </div>
                 <div style="display: flex; gap: 10px;">
                     <button type="submit" class="btn btn-primary" style="flex: 1;">保存修改</button>
@@ -922,18 +942,59 @@
             }
         }
 
+        let originalFormData = null;
+
+        function getCurrentEditFormData() {
+            const activeTypeBtn = document.querySelector('#edit-modal .type-toggle button.active');
+            return {
+                type: activeTypeBtn ? activeTypeBtn.dataset.type : 'income',
+                amount: document.getElementById('edit-amount').value,
+                category: document.getElementById('edit-category').value,
+                description: document.getElementById('edit-description').value.trim(),
+                date: document.getElementById('edit-date').value
+            };
+        }
+
+        function hasFormChanged() {
+            if (!originalFormData) return false;
+            const currentData = getCurrentEditFormData();
+            return JSON.stringify(currentData) !== JSON.stringify(originalFormData);
+        }
+
+        function clearEditFormErrors() {
+            document.querySelectorAll('#edit-form .error-message').forEach(el => {
+                el.classList.remove('show');
+                el.textContent = '';
+            });
+            document.querySelectorAll('#edit-form .form-group').forEach(el => {
+                el.classList.remove('has-error');
+            });
+        }
+
+        function showEditFormError(fieldId, message) {
+            const errorEl = document.getElementById(fieldId + '-error');
+            const formGroup = document.getElementById(fieldId).closest('.form-group');
+            if (errorEl) {
+                errorEl.textContent = message;
+                errorEl.classList.add('show');
+            }
+            if (formGroup) {
+                formGroup.classList.add('has-error');
+            }
+        }
+
         // 打开编辑弹窗
         function openEditModal(id) {
             const record = records.find(r => r.id === id);
             if (!record) return;
 
-            // 填充表单数据
+            clearEditFormErrors();
+
             document.getElementById('edit-id').value = record.id;
             document.getElementById('edit-amount').value = record.amount;
             document.getElementById('edit-description').value = record.description || '';
             document.getElementById('edit-date').value = record.date;
 
-            // 设置当前编辑类型
             const editTypeButtons = document.querySelectorAll('#edit-modal .type-toggle button');
             editTypeButtons.forEach(btn => {
                 btn.classList.remove('active');
@@ -942,20 +1003,29 @@
                 }
             });
 
-            // 更新分类选项
             updateEditCategoryOptions(record.type);
 
-            // 选中当前分类
             setTimeout(() => {
                 document.getElementById('edit-category').value = record.category;
+                originalFormData = getCurrentEditFormData();
             }, 0);
 
-            // 显示弹窗
             document.getElementById('edit-modal').classList.add('active');
         }
 
         // 关闭编辑弹窗
-        function closeEditModal() {
+        function closeEditModal(force = false) {
+            if (!force && hasFormChanged()) {
+                if (confirm('有未保存的修改，确定关闭吗？')) {
+                    originalFormData = null;
+                    clearEditFormErrors();
+                    document.getElementById('edit-modal').classList.remove('active');
+                    document.getElementById('edit-form').reset();
+                }
+                return;
+            }
+            originalFormData = null;
+            clearEditFormErrors();
             document.getElementById('edit-modal').classList.remove('active');
             document.getElementById('edit-form').reset();
         }
@@ -1645,6 +1715,7 @@
         if (editForm) {
             editForm.addEventListener('submit', (e) => {
                 e.preventDefault();
+                clearEditFormErrors();
 
                 const id = document.getElementById('edit-id').value;
                 const amount = document.getElementById('edit-amount').value;
@@ -1652,24 +1723,27 @@
                 const description = document.getElementById('edit-description').value.trim();
                 const date = document.getElementById('edit-date').value;
 
-                // 获取当前选中的类型
                 const activeTypeBtn = editModal.querySelector('.type-toggle button.active');
                 const type = activeTypeBtn ? activeTypeBtn.dataset.type : 'expense';
 
+                let isValid = true;
+
                 if (!amount || amount <= 0) {
-                    alert('请输入有效的金额');
-                    return;
+                    showEditFormError('edit-amount', '请输入有效的金额');
+                    isValid = false;
                 }
 
                 if (!category) {
-                    alert('请选择分类');
-                    return;
+                    showEditFormError('edit-category', '请选择分类');
+                    isValid = false;
                 }
 
                 if (!date) {
-                    alert('请选择日期');
-                    return;
+                    showEditFormError('edit-date', '请选择日期');
+                    isValid = false;
                 }
+
+                if (!isValid) return;
 
                 const updatedData = {
                     type: type,
@@ -1680,13 +1754,15 @@
                 };
 
                 updateRecord(id, updatedData);
-                closeEditModal();
+                closeEditModal(true);
             });
         }
 
         // 取消编辑
         if (cancelEditBtn) {
-            cancelEditBtn.addEventListener('click', closeEditModal);
+            cancelEditBtn.addEventListener('click', () => {
+                closeEditModal();
+            });
         }
 
         // 点击弹窗外部关闭
@@ -1703,11 +1779,9 @@
             const editTypeButtons = document.querySelectorAll('#edit-modal .type-toggle button');
             editTypeButtons.forEach(button => {
                 button.addEventListener('click', () => {
-                    // 更新按钮状态
                     editTypeButtons.forEach(btn => btn.classList.remove('active'));
                     button.classList.add('active');
 
-                    // 更新分类选项
                     const type = button.dataset.type;
                     updateEditCategoryOptions(type);
                 });
