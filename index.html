@@ -304,6 +304,40 @@
             background: #f0f0f0;
         }
 
+        .date-filter-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .date-filter-group label {
+            font-size: 13px;
+            font-weight: 500;
+            color: #555;
+            white-space: nowrap;
+        }
+
+        .date-filter-input {
+            padding: 8px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 13px;
+            font-family: inherit;
+            transition: border-color 0.3s ease;
+            color: #555;
+        }
+
+        .date-filter-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .date-filter-input:disabled {
+            background: #f9f9f9;
+            color: #999;
+        }
+
         .record-list {
             max-height: 500px;
             overflow-y: auto;
@@ -746,6 +780,14 @@
                     <button class="filter-btn active" data-filter="all">全部</button>
                     <button class="filter-btn" data-filter="income">收入</button>
                     <button class="filter-btn" data-filter="expense">支出</button>
+                    <div class="filter-divider"></div>
+                    <div class="date-filter-group">
+                        <label for="start-date">开始日期:</label>
+                        <input type="date" id="start-date" class="date-filter-input">
+                        <label for="end-date">结束日期:</label>
+                        <input type="date" id="end-date" class="date-filter-input">
+                        <button class="filter-btn" id="reset-date-filter">重置日期</button>
+                    </div>
                 </div>
                 <div class="record-list" id="record-list">
                     <!-- 记录将通过 JavaScript 动态生成 -->
@@ -830,6 +872,8 @@
         let currentFilter = 'all';
         let currentCategory = 'all';
         let currentType = 'income';
+        let startDate = null;
+        let endDate = null;
 
         // 分类定义
         const categories = {
@@ -860,6 +904,9 @@
         let tooltipTitle = document.getElementById('tooltip-title');
         let tooltipAmount = document.getElementById('tooltip-amount');
         let tooltipPercent = document.getElementById('tooltip-percent');
+        const startDateInput = document.getElementById('start-date');
+        const endDateInput = document.getElementById('end-date');
+        const resetDateFilterBtn = document.getElementById('reset-date-filter');
 
         // 图表颜色
         const chartColors = [
@@ -882,6 +929,9 @@
             // 初始化分类选项
             updateCategoryOptions();
 
+            // 初始化日期筛选事件监听
+            initDateFilterEvents();
+
             // 从 localStorage 加载数据
             loadRecords();
 
@@ -890,6 +940,47 @@
             renderCategoryFilters();
             renderRecords();
             updateChart();
+        }
+
+        // 初始化日期筛选事件
+        function initDateFilterEvents() {
+            // 开始日期变化事件
+            startDateInput.addEventListener('change', () => {
+                startDate = startDateInput.value || null;
+                // 确保开始日期不能晚于结束日期
+                if (startDate && endDate && startDate > endDate) {
+                    alert('开始日期不能晚于结束日期');
+                    startDateInput.value = '';
+                    startDate = null;
+                    return;
+                }
+                renderRecords();
+                updateChart();
+            });
+
+            // 结束日期变化事件
+            endDateInput.addEventListener('change', () => {
+                endDate = endDateInput.value || null;
+                // 确保结束日期不能早于开始日期
+                if (startDate && endDate && endDate < startDate) {
+                    alert('结束日期不能早于开始日期');
+                    endDateInput.value = '';
+                    endDate = null;
+                    return;
+                }
+                renderRecords();
+                updateChart();
+            });
+
+            // 重置日期筛选按钮事件
+            resetDateFilterBtn.addEventListener('click', () => {
+                startDateInput.value = '';
+                endDateInput.value = '';
+                startDate = null;
+                endDate = null;
+                renderRecords();
+                updateChart();
+            });
         }
 
         // 更新分类选项
@@ -1142,6 +1233,30 @@
             return Object.keys(groups).sort().reverse().map(key => groups[key]);
         }
 
+        // 按日期范围筛选记录
+        function filterByDateRange(records) {
+            if (!startDate && !endDate) {
+                return records;
+            }
+
+            return records.filter(record => {
+                const recordDate = record.date;
+                
+                // 如果只有开始日期，筛选大于等于开始日期的记录
+                if (startDate && !endDate) {
+                    return recordDate >= startDate;
+                }
+                
+                // 如果只有结束日期，筛选小于等于结束日期的记录
+                if (!startDate && endDate) {
+                    return recordDate <= endDate;
+                }
+                
+                // 如果都有，筛选在范围内的记录
+                return recordDate >= startDate && recordDate <= endDate;
+            });
+        }
+
         // 渲染记录列表
         function renderRecords() {
             recordList.innerHTML = '';
@@ -1158,6 +1273,9 @@
             if (currentCategory !== 'all') {
                 filteredRecords = filteredRecords.filter(record => record.category === currentCategory);
             }
+
+            // 最后按日期范围筛选
+            filteredRecords = filterByDateRange(filteredRecords);
 
             if (filteredRecords.length === 0) {
                 renderEmptyState();
@@ -1341,6 +1459,9 @@
             if (currentCategory !== 'all') {
                 filteredRecords = filteredRecords.filter(record => record.category === currentCategory);
             }
+
+            // 最后按日期范围筛选
+            filteredRecords = filterByDateRange(filteredRecords);
 
             return filteredRecords;
         }
