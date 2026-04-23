@@ -282,6 +282,13 @@
             align-items: center;
         }
 
+        #category-filters-container {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
         .filter-divider {
             width: 1px;
             height: 24px;
@@ -787,6 +794,9 @@
                         <button class="filter-btn active" data-filter="all">全部</button>
                         <button class="filter-btn" data-filter="income">收入</button>
                         <button class="filter-btn" data-filter="expense">支出</button>
+                        <div id="category-filters-container">
+                            <!-- 分类筛选按钮将通过 JavaScript 动态生成 -->
+                        </div>
                     </div>
                     <div class="filter-row">
                         <div class="date-filter-group">
@@ -796,9 +806,6 @@
                             <input type="date" id="end-date" class="date-filter-input">
                             <button class="filter-btn" id="reset-date-filter">重置日期</button>
                         </div>
-                    </div>
-                    <div class="filter-row" id="category-filters-container">
-                        <!-- 分类筛选按钮将通过 JavaScript 动态生成 -->
                     </div>
                 </div>
                 <div class="record-list" id="record-list">
@@ -1363,6 +1370,11 @@
             categoryContainer.innerHTML = '';
 
             const categories = getAvailableCategories();
+            
+            // 如果 currentCategory 不在可用分类中，或者没有可用分类，重置为 'all'
+            if (categories.length === 0 || (currentCategory !== 'all' && !categories.includes(currentCategory))) {
+                currentCategory = 'all';
+            }
             
             if (categories.length === 0) {
                 return;
