@@ -270,8 +270,14 @@
 
         .filter-section {
             display: flex;
-            gap: 10px;
+            flex-direction: column;
+            gap: 12px;
             margin-bottom: 20px;
+        }
+
+        .filter-row {
+            display: flex;
+            gap: 10px;
             flex-wrap: wrap;
             align-items: center;
         }
@@ -777,16 +783,22 @@
             <div class="card">
                 <h2 class="card-title">📋 记录列表</h2>
                 <div class="filter-section">
-                    <button class="filter-btn active" data-filter="all">全部</button>
-                    <button class="filter-btn" data-filter="income">收入</button>
-                    <button class="filter-btn" data-filter="expense">支出</button>
-                    <div class="filter-divider"></div>
-                    <div class="date-filter-group">
-                        <label for="start-date">开始日期:</label>
-                        <input type="date" id="start-date" class="date-filter-input">
-                        <label for="end-date">结束日期:</label>
-                        <input type="date" id="end-date" class="date-filter-input">
-                        <button class="filter-btn" id="reset-date-filter">重置日期</button>
+                    <div class="filter-row">
+                        <button class="filter-btn active" data-filter="all">全部</button>
+                        <button class="filter-btn" data-filter="income">收入</button>
+                        <button class="filter-btn" data-filter="expense">支出</button>
+                    </div>
+                    <div class="filter-row">
+                        <div class="date-filter-group">
+                            <label for="start-date">开始日期:</label>
+                            <input type="date" id="start-date" class="date-filter-input">
+                            <label for="end-date">结束日期:</label>
+                            <input type="date" id="end-date" class="date-filter-input">
+                            <button class="filter-btn" id="reset-date-filter">重置日期</button>
+                        </div>
+                    </div>
+                    <div class="filter-row" id="category-filters-container">
+                        <!-- 分类筛选按钮将通过 JavaScript 动态生成 -->
                     </div>
                 </div>
                 <div class="record-list" id="record-list">
@@ -1261,6 +1273,9 @@
         function renderRecords() {
             recordList.innerHTML = '';
 
+            // 渲染分类筛选按钮（总是渲染，基于所有记录的可用分类）
+            renderCategoryFilters();
+
             // 筛选记录
             let filteredRecords = records;
             
@@ -1281,9 +1296,6 @@
                 renderEmptyState();
                 return;
             }
-
-            // 渲染分类筛选按钮
-            renderCategoryFilters();
 
             // 按月份分组
             const monthGroups = groupRecordsByMonth(filteredRecords);
@@ -1342,23 +1354,19 @@
 
         // 渲染分类筛选按钮
         function renderCategoryFilters() {
-            const existingCategoryBtns = filterSection.querySelectorAll('.filter-btn[data-category]');
-            existingCategoryBtns.forEach(btn => btn.remove());
-
-            const existingDivider = filterSection.querySelector('.filter-divider');
-            if (existingDivider) {
-                existingDivider.remove();
+            const categoryContainer = document.getElementById('category-filters-container');
+            if (!categoryContainer) {
+                return;
             }
+
+            // 清空容器
+            categoryContainer.innerHTML = '';
 
             const categories = getAvailableCategories();
             
             if (categories.length === 0) {
                 return;
             }
-
-            const divider = document.createElement('div');
-            divider.className = 'filter-divider';
-            filterSection.appendChild(divider);
 
             categories.forEach(category => {
                 const btn = document.createElement('button');
@@ -1378,7 +1386,7 @@
                     updateChart();
                 });
 
-                filterSection.appendChild(btn);
+                categoryContainer.appendChild(btn);
             });
         }
 
