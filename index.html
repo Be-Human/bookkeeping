@@ -1891,11 +1891,15 @@
         // 筛选按钮
         filterButtons.forEach(button => {
             button.addEventListener('click', () => {
-                currentFilter = button.dataset.filter;
-                currentCategory = 'all';
-                updateFilterButtons();
-                renderRecords();
-                updateChart();
+                // 只处理类型筛选按钮（具有有效的 data-filter 值）
+                const filterValue = button.dataset.filter;
+                if (filterValue === 'all' || filterValue === 'income' || filterValue === 'expense') {
+                    currentFilter = filterValue;
+                    currentCategory = 'all';
+                    updateFilterButtons();
+                    renderRecords();
+                    updateChart();
+                }
             });
         });
 
