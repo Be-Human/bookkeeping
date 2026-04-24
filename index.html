@@ -317,6 +317,36 @@
             background: #f0f0f0;
         }
 
+        .search-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .search-group label {
+            font-size: 13px;
+            font-weight: 500;
+            color: #555;
+            white-space: nowrap;
+        }
+
+        .search-input {
+            padding: 8px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 13px;
+            font-family: inherit;
+            transition: border-color 0.3s ease;
+            color: #555;
+            min-width: 200px;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
         .date-filter-group {
             display: flex;
             align-items: center;
@@ -799,6 +829,12 @@
                         </div>
                     </div>
                     <div class="filter-row">
+                        <div class="search-group">
+                            <label for="search-input">关键词搜索:</label>
+                            <input type="text" id="search-input" class="search-input" placeholder="搜索描述或分类...">
+                        </div>
+                    </div>
+                    <div class="filter-row">
                         <div class="date-filter-group">
                             <label for="start-date">开始日期:</label>
                             <input type="date" id="start-date" class="date-filter-input">
@@ -914,11 +950,11 @@
         const filterSection = document.querySelector('.filter-section');
         const typeToggleButtons = document.querySelectorAll('#record-form .type-toggle button');
         const filterButtons = document.querySelectorAll('.filter-btn');
-        const pieChartCanvas = document.getElementById('pie-chart');
-        const legendContainer = document.getElementById('legend-container');
+        let pieChartCanvas = document.getElementById('pie-chart');
+        let legendContainer = document.getElementById('legend-container');
         const chartContainer = document.getElementById('chart-container');
-        const chartCenterText = document.getElementById('chart-center-text');
-        const chartTotal = document.getElementById('chart-total');
+        let chartCenterText = document.getElementById('chart-center-text');
+        let chartTotal = document.getElementById('chart-total');
         let chartTooltip = document.getElementById('chart-tooltip');
         let tooltipTitle = document.getElementById('tooltip-title');
         let tooltipAmount = document.getElementById('tooltip-amount');
@@ -926,6 +962,10 @@
         const startDateInput = document.getElementById('start-date');
         const endDateInput = document.getElementById('end-date');
         const resetDateFilterBtn = document.getElementById('reset-date-filter');
+        const searchInput = document.getElementById('search-input');
+        
+        // 搜索相关变量
+        let searchKeyword = '';
 
         // 图表颜色
         const chartColors = [
@@ -950,6 +990,9 @@
 
             // 初始化日期筛选事件监听
             initDateFilterEvents();
+
+            // 初始化搜索事件监听
+            initSearchEvents();
 
             // 从 localStorage 加载数据
             loadRecords();
@@ -997,6 +1040,15 @@
                 endDateInput.value = '';
                 startDate = null;
                 endDate = null;
+                renderRecords();
+                updateChart();
+            });
+        }
+
+        // 初始化搜索事件
+        function initSearchEvents() {
+            searchInput.addEventListener('input', () => {
+                searchKeyword = searchInput.value;
                 renderRecords();
                 updateChart();
             });
@@ -1276,6 +1328,20 @@
             });
         }
 
+        // 按关键词筛选记录
+        function filterByKeyword(records) {
+            if (!searchKeyword || searchKeyword.trim() === '') {
+                return records;
+            }
+
+            const keyword = searchKeyword.trim().toLowerCase();
+            return records.filter(record => {
+                const description = (record.description || '').toLowerCase();
+                const category = (record.category || '').toLowerCase();
+                return description.includes(keyword) || category.includes(keyword);
+            });
+        }
+
         // 渲染记录列表
         function renderRecords() {
             recordList.innerHTML = '';
@@ -1296,8 +1362,11 @@
                 filteredRecords = filteredRecords.filter(record => record.category === currentCategory);
             }
 
-            // 最后按日期范围筛选
+            // 按日期范围筛选
             filteredRecords = filterByDateRange(filteredRecords);
+
+            // 最后按关键词筛选
+            filteredRecords = filterByKeyword(filteredRecords);
 
             if (filteredRecords.length === 0) {
                 renderEmptyState();
@@ -1480,8 +1549,11 @@
                 filteredRecords = filteredRecords.filter(record => record.category === currentCategory);
             }
 
-            // 最后按日期范围筛选
+            // 按日期范围筛选
             filteredRecords = filterByDateRange(filteredRecords);
+
+            // 最后按关键词筛选
+            filteredRecords = filterByKeyword(filteredRecords);
 
             return filteredRecords;
         }
@@ -1726,14 +1798,14 @@
                     </div>
                 `;
                 // 重新获取 DOM 元素引用
-                window.pieChartCanvas = document.getElementById('pie-chart');
-                window.legendContainer = document.getElementById('legend-container');
-                window.chartCenterText = document.getElementById('chart-center-text');
-                window.chartTotal = document.getElementById('chart-total');
-                window.chartTooltip = document.getElementById('chart-tooltip');
-                window.tooltipTitle = document.getElementById('tooltip-title');
-                window.tooltipAmount = document.getElementById('tooltip-amount');
-                window.tooltipPercent = document.getElementById('tooltip-percent');
+                pieChartCanvas = document.getElementById('pie-chart');
+                legendContainer = document.getElementById('legend-container');
+                chartCenterText = document.getElementById('chart-center-text');
+                chartTotal = document.getElementById('chart-total');
+                chartTooltip = document.getElementById('chart-tooltip');
+                tooltipTitle = document.getElementById('tooltip-title');
+                tooltipAmount = document.getElementById('tooltip-amount');
+                tooltipPercent = document.getElementById('tooltip-percent');
             }
 
             if (categoryData.data.length === 0 || categoryData.total === 0) {
