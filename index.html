@@ -803,6 +803,208 @@
             border-right: 6px solid transparent;
             border-top: 6px solid rgba(0, 0, 0, 0.85);
         }
+
+        /* 预算管理样式 */
+        .budget-section {
+            margin-bottom: 30px;
+        }
+
+        .budget-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .budget-toggle-icon {
+            font-size: 14px;
+            color: #667eea;
+            transition: transform 0.3s ease;
+        }
+
+        .budget-toggle-icon.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        .budget-content {
+            margin-top: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .budget-content.collapsed {
+            display: none;
+        }
+
+        .section-subtitle {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .budget-setup, .budget-overview {
+            margin-bottom: 24px;
+        }
+
+        .budget-form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 16px;
+        }
+
+        .budget-form-item {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .budget-form-item label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #555;
+        }
+
+        .budget-form-item input {
+            padding: 10px 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .budget-form-item input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .budget-cards-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .budget-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .budget-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .budget-card.warning {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+        }
+
+        .budget-card.danger {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+        }
+
+        .budget-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .budget-card-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .budget-card-percentage {
+            font-size: 18px;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .budget-card.warning .budget-card-percentage {
+            color: #d97706;
+        }
+
+        .budget-card.danger .budget-card-percentage {
+            color: #dc2626;
+        }
+
+        .budget-card-details {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .budget-detail-item {
+            text-align: center;
+        }
+
+        .budget-detail-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 4px;
+        }
+
+        .budget-detail-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .budget-detail-value.positive {
+            color: #10b981;
+        }
+
+        .budget-detail-value.negative {
+            color: #ef4444;
+        }
+
+        .budget-progress-container {
+            height: 10px;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .budget-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            border-radius: 5px;
+            transition: width 0.5s ease;
+        }
+
+        .budget-card.warning .budget-progress-bar {
+            background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%);
+        }
+
+        .budget-card.danger .budget-progress-bar {
+            background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
+        }
+
+        .budget-empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #888;
+        }
+
+        .budget-empty-state .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        @media (max-width: 768px) {
+            .budget-cards-container {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
@@ -825,6 +1027,36 @@
                 <div class="summary-card-title">本月支出</div>
                 <div class="summary-card-amount" id="month-expense">¥0.00</div>
                 <div class="summary-card-total" id="total-expense">累计：¥0.00</div>
+            </div>
+        </div>
+
+        <!-- 预算管理区域 -->
+        <div class="card budget-section">
+            <div class="budget-header" id="budget-toggle">
+                <h2 class="card-title" style="margin-bottom: 0; border-bottom: none; padding-bottom: 0;">💰 预算管理</h2>
+                <span class="budget-toggle-icon" id="budget-toggle-icon">▼</span>
+            </div>
+            <div class="budget-content" id="budget-content">
+                <!-- 预算设置区域 -->
+                <div class="budget-setup">
+                    <h3 class="section-subtitle">设置月度预算</h3>
+                    <div class="budget-form-grid" id="budget-form-grid">
+                        <!-- 预算设置表单将通过 JavaScript 动态生成 -->
+                    </div>
+                    <button class="btn btn-primary" id="save-budgets" style="margin-top: 16px; width: auto; padding: 10px 24px;">保存预算</button>
+                </div>
+
+                <!-- 预算使用情况 -->
+                <div class="budget-overview">
+                    <h3 class="section-subtitle">本月预算使用情况</h3>
+                    <div class="budget-cards-container" id="budget-cards-container">
+                        <!-- 预算卡片将通过 JavaScript 动态生成 -->
+                    </div>
+                    <div class="budget-empty-state" id="budget-empty-state" style="display: none;">
+                        <div class="empty-state-icon">📊</div>
+                        <p>暂无预算设置，快去设置预算吧！</p>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -1001,6 +1233,9 @@
         let startDate = null;
         let endDate = null;
 
+        // 预算管理
+        let budgets = {};
+
         // 分类定义
         const categories = {
             income: ['工资', '兼职', '投资', '其他收入'],
@@ -1059,6 +1294,15 @@
         let currentBarChartData = null;
         let hoveredBarIndex = -1;
 
+        // 预算管理相关 DOM 元素
+        let budgetToggle = document.getElementById('budget-toggle');
+        let budgetToggleIcon = document.getElementById('budget-toggle-icon');
+        let budgetContent = document.getElementById('budget-content');
+        let budgetFormGrid = document.getElementById('budget-form-grid');
+        let saveBudgetsBtn = document.getElementById('save-budgets');
+        let budgetCardsContainer = document.getElementById('budget-cards-container');
+        let budgetEmptyState = document.getElementById('budget-empty-state');
+
         // 初始化
         function init() {
             // 设置默认日期为今天
@@ -1076,6 +1320,10 @@
 
             // 从 localStorage 加载数据
             loadRecords();
+            loadBudgets();
+
+            // 初始化预算管理事件
+            initBudgetEvents();
 
             // 渲染数据
             updateSummary();
@@ -1084,6 +1332,10 @@
             updateChart();
             updateBarChart();
             initBarChartEvents();
+
+            // 渲染预算设置表单和使用情况
+            renderBudgetForm();
+            renderBudgetOverview();
         }
 
         // 初始化日期筛选事件
@@ -1161,6 +1413,188 @@
             localStorage.setItem('bookkeeping_records', JSON.stringify(records));
         }
 
+        // 从 localStorage 加载预算
+        function loadBudgets() {
+            const savedBudgets = localStorage.getItem('bookkeeping_budgets');
+            if (savedBudgets) {
+                budgets = JSON.parse(savedBudgets);
+            }
+        }
+
+        // 保存预算到 localStorage
+        function saveBudgets() {
+            localStorage.setItem('bookkeeping_budgets', JSON.stringify(budgets));
+        }
+
+        // 初始化预算管理事件
+        function initBudgetEvents() {
+            // 预算区域展开/折叠
+            if (budgetToggle) {
+                budgetToggle.addEventListener('click', () => {
+                    if (budgetContent) {
+                        budgetContent.classList.toggle('collapsed');
+                    }
+                    if (budgetToggleIcon) {
+                        budgetToggleIcon.classList.toggle('collapsed');
+                    }
+                });
+            }
+
+            // 保存预算按钮
+            if (saveBudgetsBtn) {
+                saveBudgetsBtn.addEventListener('click', () => {
+                    saveCurrentBudgets();
+                });
+            }
+        }
+
+        // 保存当前设置的预算
+        function saveCurrentBudgets() {
+            const expenseCategories = categories.expense;
+            let hasChanges = false;
+
+            expenseCategories.forEach(category => {
+                const inputId = `budget-input-${category}`;
+                const input = document.getElementById(inputId);
+                if (input) {
+                    const value = parseFloat(input.value);
+                    if (!isNaN(value) && value > 0) {
+                        if (budgets[category] !== value) {
+                            budgets[category] = value;
+                            hasChanges = true;
+                        }
+                    } else if (budgets[category]) {
+                        delete budgets[category];
+                        hasChanges = true;
+                    }
+                }
+            });
+
+            if (hasChanges) {
+                saveBudgets();
+                renderBudgetOverview();
+                alert('预算已保存！');
+            } else {
+                alert('没有需要保存的更改');
+            }
+        }
+
+        // 渲染预算设置表单
+        function renderBudgetForm() {
+            if (!budgetFormGrid) return;
+
+            budgetFormGrid.innerHTML = '';
+            const expenseCategories = categories.expense;
+
+            expenseCategories.forEach(category => {
+                const formItem = document.createElement('div');
+                formItem.className = 'budget-form-item';
+
+                const currentBudget = budgets[category] || '';
+
+                formItem.innerHTML = `
+                    <label for="budget-input-${category}">${category}</label>
+                    <input 
+                        type="number" 
+                        id="budget-input-${category}" 
+                        step="0.01" 
+                        min="0" 
+                        placeholder="请输入预算金额"
+                        value="${currentBudget}"
+                    >
+                `;
+
+                budgetFormGrid.appendChild(formItem);
+            });
+        }
+
+        // 获取当月各分类的支出金额
+        function getMonthlyExpenseByCategory() {
+            const currentMonth = getCurrentMonthKey();
+            const categoryExpenses = {};
+
+            records.forEach(record => {
+                if (record.type === 'expense' && isCurrentMonth(record.date)) {
+                    const category = record.category || '其他支出';
+                    if (!categoryExpenses[category]) {
+                        categoryExpenses[category] = 0;
+                    }
+                    categoryExpenses[category] += record.amount;
+                }
+            });
+
+            return categoryExpenses;
+        }
+
+        // 渲染预算使用情况
+        function renderBudgetOverview() {
+            if (!budgetCardsContainer || !budgetEmptyState) return;
+
+            budgetCardsContainer.innerHTML = '';
+
+            // 获取有预算设置的分类
+            const budgetedCategories = Object.keys(budgets);
+
+            if (budgetedCategories.length === 0) {
+                budgetCardsContainer.style.display = 'none';
+                budgetEmptyState.style.display = 'block';
+                return;
+            }
+
+            budgetCardsContainer.style.display = 'grid';
+            budgetEmptyState.style.display = 'none';
+
+            // 获取当月各分类的支出
+            const monthlyExpenses = getMonthlyExpenseByCategory();
+
+            budgetedCategories.forEach(category => {
+                const budgetAmount = budgets[category];
+                const spentAmount = monthlyExpenses[category] || 0;
+                const remainingAmount = budgetAmount - spentAmount;
+                const percentage = budgetAmount > 0 ? (spentAmount / budgetAmount) * 100 : 0;
+
+                // 确定卡片样式类
+                let cardClass = 'budget-card';
+                if (percentage >= 100) {
+                    cardClass += ' danger';
+                } else if (percentage >= 80) {
+                    cardClass += ' warning';
+                }
+
+                // 创建预算卡片
+                const budgetCard = document.createElement('div');
+                budgetCard.className = cardClass;
+
+                budgetCard.innerHTML = `
+                    <div class="budget-card-header">
+                        <h3 class="budget-card-title">${category}</h3>
+                        <span class="budget-card-percentage">${percentage.toFixed(1)}%</span>
+                    </div>
+                    <div class="budget-card-details">
+                        <div class="budget-detail-item">
+                            <div class="budget-detail-label">预算金额</div>
+                            <div class="budget-detail-value">${formatCurrency(budgetAmount)}</div>
+                        </div>
+                        <div class="budget-detail-item">
+                            <div class="budget-detail-label">已花费</div>
+                            <div class="budget-detail-value">${formatCurrency(spentAmount)}</div>
+                        </div>
+                        <div class="budget-detail-item">
+                            <div class="budget-detail-label">剩余金额</div>
+                            <div class="budget-detail-value ${remainingAmount >= 0 ? 'positive' : 'negative'}">
+                                ${remainingAmount >= 0 ? formatCurrency(remainingAmount) : '-' + formatCurrency(Math.abs(remainingAmount))}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="budget-progress-container">
+                        <div class="budget-progress-bar" style="width: ${Math.min(percentage, 100)}%;"></div>
+                    </div>
+                `;
+
+                budgetCardsContainer.appendChild(budgetCard);
+            });
+        }
+
         // 添加记录
         function addRecord(record) {
             const newRecord = {
@@ -1174,6 +1608,7 @@
             renderRecords();
             updateChart();
             updateBarChart();
+            renderBudgetOverview();
         }
 
         // 删除记录
@@ -1185,6 +1620,7 @@
                 renderRecords();
                 updateChart();
                 updateBarChart();
+                renderBudgetOverview();
             }
         }
 
@@ -1305,6 +1741,7 @@
             renderRecords();
             updateChart();
             updateBarChart();
+            renderBudgetOverview();
         }
 
         // 更新汇总信息
