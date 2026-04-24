@@ -966,6 +966,11 @@
             color: #ef4444;
         }
 
+        .budget-detail-label.negative {
+            color: #ef4444;
+            font-weight: 600;
+        }
+
         .budget-progress-container {
             height: 10px;
             background: rgba(0, 0, 0, 0.1);
@@ -1565,6 +1570,12 @@
                 const budgetCard = document.createElement('div');
                 budgetCard.className = cardClass;
 
+                const isOverBudget = remainingAmount < 0;
+                const labelText = isOverBudget ? '超支' : '剩余金额';
+                const displayAmount = isOverBudget ? Math.abs(remainingAmount) : remainingAmount;
+                const labelClass = isOverBudget ? 'budget-detail-label negative' : 'budget-detail-label';
+                const valueClass = isOverBudget ? 'budget-detail-value negative' : 'budget-detail-value positive';
+
                 budgetCard.innerHTML = `
                     <div class="budget-card-header">
                         <h3 class="budget-card-title">${category}</h3>
@@ -1580,10 +1591,8 @@
                             <div class="budget-detail-value">${formatCurrency(spentAmount)}</div>
                         </div>
                         <div class="budget-detail-item">
-                            <div class="budget-detail-label">剩余金额</div>
-                            <div class="budget-detail-value ${remainingAmount >= 0 ? 'positive' : 'negative'}">
-                                ${remainingAmount >= 0 ? formatCurrency(remainingAmount) : '-' + formatCurrency(Math.abs(remainingAmount))}
-                            </div>
+                            <div class="${labelClass}">${labelText}</div>
+                            <div class="${valueClass}">${formatCurrency(displayAmount)}</div>
                         </div>
                     </div>
                     <div class="budget-progress-container">
