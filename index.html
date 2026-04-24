@@ -756,6 +756,53 @@
         .tooltip-value {
             font-weight: 500;
         }
+
+        /* 柱状图样式 */
+        .bar-chart-container {
+            width: 100%;
+            min-height: 400px;
+        }
+
+        .bar-chart-wrapper {
+            position: relative;
+            width: 100%;
+            height: 400px;
+        }
+
+        #bar-chart {
+            width: 100%;
+            height: 100%;
+        }
+
+        .bar-chart-tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            pointer-events: none;
+            z-index: 100;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            white-space: nowrap;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .bar-chart-tooltip.show {
+            opacity: 1;
+        }
+
+        .bar-chart-tooltip::before {
+            content: '';
+            position: absolute;
+            bottom: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 6px solid rgba(0, 0, 0, 0.85);
+        }
     </style>
 </head>
 <body>
@@ -877,6 +924,30 @@
                 </div>
             </div>
         </div>
+
+        <!-- 月度趋势图区域 -->
+        <div class="card chart-section">
+            <h2 class="card-title">📈 月度趋势</h2>
+            <div class="bar-chart-container" id="bar-chart-container">
+                <div class="bar-chart-wrapper">
+                    <canvas id="bar-chart"></canvas>
+                    <div class="bar-chart-tooltip" id="bar-chart-tooltip">
+                        <div class="tooltip-title" id="bar-tooltip-title"></div>
+                        <div class="tooltip-row">
+                            <span class="tooltip-label">收入</span>
+                            <span class="tooltip-value" id="bar-tooltip-income"></span>
+                        </div>
+                        <div class="tooltip-row">
+                            <span class="tooltip-label">支出</span>
+                            <span class="tooltip-value" id="bar-tooltip-expense"></span>
+                        </div>
+                        <div class="tooltip-row" style="margin-top: 8px; padding-top: 6px; border-top: 1px solid rgba(255, 255, 255, 0.2);">
+                            <span class="tooltip-label">点击筛选该月数据</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- 编辑弹窗 -->
@@ -979,6 +1050,15 @@
         let hoveredSliceIndex = -1;
         let currentChartData = null;
 
+        // 柱状图相关变量
+        let barChartCanvas = document.getElementById('bar-chart');
+        let barChartTooltip = document.getElementById('bar-chart-tooltip');
+        let barTooltipTitle = document.getElementById('bar-tooltip-title');
+        let barTooltipIncome = document.getElementById('bar-tooltip-income');
+        let barTooltipExpense = document.getElementById('bar-tooltip-expense');
+        let currentBarChartData = null;
+        let hoveredBarIndex = -1;
+
         // 初始化
         function init() {
             // 设置默认日期为今天
@@ -1002,6 +1082,8 @@
             renderCategoryFilters();
             renderRecords();
             updateChart();
+            updateBarChart();
+            initBarChartEvents();
         }
 
         // 初始化日期筛选事件
@@ -1091,6 +1173,7 @@
             updateSummary();
             renderRecords();
             updateChart();
+            updateBarChart();
         }
 
         // 删除记录
@@ -1101,6 +1184,7 @@
                 updateSummary();
                 renderRecords();
                 updateChart();
+                updateBarChart();
             }
         }
 
@@ -1220,6 +1304,7 @@
             updateSummary();
             renderRecords();
             updateChart();
+            updateBarChart();
         }
 
         // 更新汇总信息
@@ -1822,6 +1907,418 @@
             // 显示中心总计
             chartCenterText.style.display = 'block';
             chartTotal.textContent = formatCurrency(categoryData.total);
+        }
+
+        // 获取所有记录的月度数据（不应用筛选）
+        function getMonthlyData() {
+            const monthlyData = {};
+            
+            records.forEach(record => {
+                const monthKey = getMonthKey(record.date);
+                if (!monthlyData[monthKey]) {
+                    monthlyData[monthKey] = {
+                        monthKey: monthKey,
+                        year: new Date(record.date).getFullYear(),
+                        month: new Date(record.date).getMonth() + 1,
+                        incomeTotal: 0,
+                        expenseTotal: 0
+                    };
+                }
+                
+                if (record.type === 'income') {
+                    monthlyData[monthKey].incomeTotal += record.amount;
+                } else {
+                    monthlyData[monthKey].expenseTotal += record.amount;
+                }
+            });
+            
+            // 转换为数组并按时间顺序排序（从最早到最新）
+            const sortedMonths = Object.keys(monthlyData).sort().map(key => monthlyData[key]);
+            
+            return {
+                months: sortedMonths,
+                maxAmount: Math.max(
+                    ...sortedMonths.map(m => Math.max(m.incomeTotal, m.expenseTotal)),
+                    0
+                )
+            };
+        }
+
+        // 绘制柱状图
+        function drawBarChart(data) {
+            const canvas = barChartCanvas;
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+            const dpr = window.devicePixelRatio || 1;
+            const wrapper = canvas.parentElement;
+            const width = wrapper.clientWidth;
+            const height = wrapper.clientHeight;
+            
+            // 设置 canvas 尺寸
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            canvas.style.width = width + 'px';
+            canvas.style.height = height + 'px';
+            ctx.scale(dpr, dpr);
+            
+            // 图表边距
+            const padding = { top: 40, right: 40, bottom: 80, left: 80 };
+            const chartWidth = width - padding.left - padding.right;
+            const chartHeight = height - padding.top - padding.bottom;
+            
+            // 清除画布
+            ctx.clearRect(0, 0, width, height);
+            
+            // 检查是否有数据
+            if (data.months.length === 0 || data.maxAmount === 0) {
+                // 绘制空状态
+                ctx.fillStyle = '#999';
+                ctx.font = '16px -apple-system, BlinkMacSystemFont, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('暂无数据，快去添加记录吧！', width / 2, height / 2);
+                currentBarChartData = null;
+                return;
+            }
+            
+            const months = data.months;
+            const maxAmount = data.maxAmount;
+            const numMonths = months.length;
+            
+            // 柱子宽度和间距
+            const groupWidth = chartWidth / numMonths;
+            const barWidth = groupWidth * 0.35;
+            const barGap = groupWidth * 0.15;
+            
+            // 保存柱子位置信息，用于检测鼠标悬停和点击
+            const bars = [];
+            
+            // 绘制 Y 轴刻度
+            ctx.strokeStyle = '#e0e0e0';
+            ctx.lineWidth = 1;
+            ctx.fillStyle = '#666';
+            ctx.font = '12px -apple-system, BlinkMacSystemFont, sans-serif';
+            ctx.textAlign = 'right';
+            
+            const numGridLines = 5;
+            for (let i = 0; i <= numGridLines; i++) {
+                const y = padding.top + chartHeight - (chartHeight / numGridLines) * i;
+                const value = (maxAmount / numGridLines) * i;
+                
+                // 绘制网格线
+                ctx.beginPath();
+                ctx.moveTo(padding.left, y);
+                ctx.lineTo(width - padding.right, y);
+                ctx.stroke();
+                
+                // 绘制刻度值
+                ctx.fillText('¥' + value.toFixed(0), padding.left - 10, y + 4);
+            }
+            
+            // 绘制 X 轴
+            ctx.beginPath();
+            ctx.moveTo(padding.left, padding.top + chartHeight);
+            ctx.lineTo(width - padding.right, padding.top + chartHeight);
+            ctx.stroke();
+            
+            // 绘制柱子
+            months.forEach((monthData, index) => {
+                const groupX = padding.left + index * groupWidth + barGap;
+                
+                // 收入柱子（绿色）
+                const incomeHeight = (monthData.incomeTotal / maxAmount) * chartHeight;
+                const incomeX = groupX;
+                const incomeY = padding.top + chartHeight - incomeHeight;
+                
+                ctx.fillStyle = hoveredBarIndex === index * 2 ? '#059669' : '#10b981';
+                ctx.fillRect(incomeX, incomeY, barWidth, incomeHeight);
+                
+                // 添加描边
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(incomeX, incomeY, barWidth, incomeHeight);
+                
+                // 支出柱子（红色）
+                const expenseHeight = (monthData.expenseTotal / maxAmount) * chartHeight;
+                const expenseX = groupX + barWidth + barGap;
+                const expenseY = padding.top + chartHeight - expenseHeight;
+                
+                ctx.fillStyle = hoveredBarIndex === index * 2 + 1 ? '#dc2626' : '#ef4444';
+                ctx.fillRect(expenseX, expenseY, barWidth, expenseHeight);
+                
+                // 添加描边
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(expenseX, expenseY, barWidth, expenseHeight);
+                
+                // 保存柱子信息
+                bars.push({
+                    index: index * 2,
+                    monthIndex: index,
+                    type: 'income',
+                    x: incomeX,
+                    y: incomeY,
+                    width: barWidth,
+                    height: incomeHeight,
+                    monthData: monthData
+                });
+                bars.push({
+                    index: index * 2 + 1,
+                    monthIndex: index,
+                    type: 'expense',
+                    x: expenseX,
+                    y: expenseY,
+                    width: barWidth,
+                    height: expenseHeight,
+                    monthData: monthData
+                });
+                
+                // 绘制 X 轴标签
+                ctx.fillStyle = '#666';
+                ctx.font = '12px -apple-system, BlinkMacSystemFont, sans-serif';
+                ctx.textAlign = 'center';
+                const labelX = groupX + barWidth + barGap / 2;
+                const labelY = height - padding.bottom + 30;
+                ctx.fillText(`${monthData.year}年${monthData.month}月`, labelX, labelY);
+            });
+            
+            // 绘制图例
+            ctx.textAlign = 'left';
+            ctx.font = '13px -apple-system, BlinkMacSystemFont, sans-serif';
+            
+            // 收入图例
+            ctx.fillStyle = '#10b981';
+            ctx.fillRect(padding.left, 10, 16, 16);
+            ctx.fillStyle = '#333';
+            ctx.fillText('收入', padding.left + 22, 23);
+            
+            // 支出图例
+            ctx.fillStyle = '#ef4444';
+            ctx.fillRect(padding.left + 80, 10, 16, 16);
+            ctx.fillStyle = '#333';
+            ctx.fillText('支出', padding.left + 102, 23);
+            
+            // 保存当前数据
+            currentBarChartData = {
+                data: data,
+                bars: bars,
+                width: width,
+                height: height,
+                padding: padding
+            };
+        }
+
+        // 更新柱状图
+        function updateBarChart() {
+            const monthlyData = getMonthlyData();
+            drawBarChart(monthlyData);
+        }
+
+        // 检测鼠标悬停在哪个柱子上
+        function getHoveredBarIndex(mouseX, mouseY) {
+            if (!currentBarChartData || !currentBarChartData.bars) {
+                return -1;
+            }
+            
+            const canvas = barChartCanvas;
+            const rect = canvas.getBoundingClientRect();
+            const x = mouseX - rect.left;
+            const y = mouseY - rect.top;
+            
+            // 检查每个柱子
+            for (let i = 0; i < currentBarChartData.bars.length; i++) {
+                const bar = currentBarChartData.bars[i];
+                if (x >= bar.x && x <= bar.x + bar.width &&
+                    y >= bar.y && y <= bar.y + bar.height) {
+                    return i;
+                }
+            }
+            
+            return -1;
+        }
+
+        // 显示柱状图提示框
+        function showBarTooltip(bar, mouseX, mouseY) {
+            if (!barChartTooltip || !barTooltipTitle || !barTooltipIncome || !barTooltipExpense) {
+                return;
+            }
+            
+            const monthData = bar.monthData;
+            
+            // 设置提示框内容
+            barTooltipTitle.textContent = `${monthData.year}年${monthData.month}月`;
+            barTooltipIncome.textContent = '+' + formatCurrency(monthData.incomeTotal);
+            barTooltipExpense.textContent = '-' + formatCurrency(monthData.expenseTotal);
+            
+            // 显示提示框
+            barChartTooltip.classList.add('show');
+            
+            // 计算提示框位置
+            const canvas = barChartCanvas;
+            const canvasRect = canvas.getBoundingClientRect();
+            const wrapperRect = canvas.parentElement.getBoundingClientRect();
+            
+            // 获取提示框尺寸
+            const tooltipRect = barChartTooltip.getBoundingClientRect();
+            const tooltipWidth = tooltipRect.width || 180;
+            const tooltipHeight = tooltipRect.height || 100;
+            
+            // 计算位置：在鼠标位置上方居中
+            let left = mouseX - wrapperRect.left - tooltipWidth / 2;
+            let top = mouseY - wrapperRect.top - tooltipHeight - 15;
+            
+            // 边界检查
+            if (left < 5) {
+                left = 5;
+            }
+            if (left + tooltipWidth > wrapperRect.width - 5) {
+                left = wrapperRect.width - tooltipWidth - 5;
+            }
+            if (top < 5) {
+                // 如果太靠上，显示在鼠标下方
+                top = mouseY - wrapperRect.top + 20;
+            }
+            
+            barChartTooltip.style.left = left + 'px';
+            barChartTooltip.style.top = top + 'px';
+        }
+
+        // 隐藏柱状图提示框
+        function hideBarTooltip() {
+            if (barChartTooltip) {
+                barChartTooltip.classList.remove('show');
+            }
+        }
+
+        // 处理柱状图鼠标移动事件
+        function handleBarChartMouseMove(e) {
+            if (!barChartCanvas) {
+                return;
+            }
+            
+            const mouseX = e.clientX;
+            const mouseY = e.clientY;
+            
+            // 获取悬停的柱子索引
+            const newHoveredIndex = getHoveredBarIndex(mouseX, mouseY);
+            
+            // 如果悬停索引变化了
+            if (newHoveredIndex !== hoveredBarIndex) {
+                // 计算对应的月份索引（每个月有2个柱子）
+                const newMonthIndex = newHoveredIndex >= 0 ? Math.floor(newHoveredIndex / 2) : -1;
+                const oldMonthIndex = hoveredBarIndex >= 0 ? Math.floor(hoveredBarIndex / 2) : -1;
+                
+                // 只有当月份变化时才重绘
+                if (newMonthIndex !== oldMonthIndex) {
+                    hoveredBarIndex = newHoveredIndex;
+                    
+                    // 重新绘制柱状图
+                    if (currentBarChartData) {
+                        drawBarChart(currentBarChartData.data);
+                    }
+                }
+                
+                // 显示或隐藏提示框
+                if (newHoveredIndex >= 0 && currentBarChartData && currentBarChartData.bars) {
+                    const bar = currentBarChartData.bars[newHoveredIndex];
+                    showBarTooltip(bar, mouseX, mouseY);
+                } else {
+                    hideBarTooltip();
+                }
+            } else if (newHoveredIndex >= 0 && currentBarChartData && currentBarChartData.bars) {
+                // 如果悬停索引没变，只更新提示框位置
+                const bar = currentBarChartData.bars[newHoveredIndex];
+                showBarTooltip(bar, mouseX, mouseY);
+            }
+        }
+
+        // 处理柱状图鼠标点击事件
+        function handleBarChartClick(e) {
+            if (!barChartCanvas || !currentBarChartData || !currentBarChartData.bars) {
+                return;
+            }
+            
+            const mouseX = e.clientX;
+            const mouseY = e.clientY;
+            
+            // 获取点击的柱子索引
+            const clickedIndex = getHoveredBarIndex(mouseX, mouseY);
+            
+            if (clickedIndex >= 0) {
+                const bar = currentBarChartData.bars[clickedIndex];
+                const monthData = bar.monthData;
+                
+                // 计算该月的第一天和最后一天
+                const year = monthData.year;
+                const month = monthData.month;
+                const firstDay = `${year}-${String(month).padStart(2, '0')}-01`;
+                
+                // 计算该月的最后一天
+                const lastDayOfMonth = new Date(year, month, 0).getDate();
+                const lastDay = `${year}-${String(month).padStart(2, '0')}-${String(lastDayOfMonth).padStart(2, '0')}`;
+                
+                // 设置日期筛选
+                startDate = firstDay;
+                endDate = lastDay;
+                startDateInput.value = startDate;
+                endDateInput.value = endDate;
+                
+                // 重置其他筛选条件
+                currentFilter = 'all';
+                currentCategory = 'all';
+                searchKeyword = '';
+                searchInput.value = '';
+                
+                // 更新筛选按钮状态
+                updateFilterButtons();
+                
+                // 重新渲染列表和图表
+                renderRecords();
+                updateChart();
+            }
+        }
+
+        // 处理柱状图鼠标离开事件
+        function handleBarChartMouseLeave() {
+            if (hoveredBarIndex >= 0) {
+                hoveredBarIndex = -1;
+                hideBarTooltip();
+                if (currentBarChartData) {
+                    drawBarChart(currentBarChartData.data);
+                }
+            }
+        }
+
+        // 初始化柱状图事件监听
+        function initBarChartEvents() {
+            // 使用事件委托
+            document.addEventListener('mousemove', (e) => {
+                const target = e.target;
+                if (target.id === 'bar-chart' || (target.closest && target.closest('#bar-chart'))) {
+                    handleBarChartMouseMove(e);
+                } else if (hoveredBarIndex >= 0) {
+                    // 检查鼠标是否还在 bar-chart-wrapper 内
+                    const barChartWrapper = document.querySelector('.bar-chart-wrapper');
+                    if (barChartWrapper) {
+                        const rect = barChartWrapper.getBoundingClientRect();
+                        if (e.clientX < rect.left || e.clientX > rect.right ||
+                            e.clientY < rect.top || e.clientY > rect.bottom) {
+                            handleBarChartMouseLeave();
+                        }
+                    }
+                }
+            });
+            
+            // 点击事件
+            document.addEventListener('click', (e) => {
+                const target = e.target;
+                if (target.id === 'bar-chart' || (target.closest && target.closest('#bar-chart'))) {
+                    handleBarChartClick(e);
+                }
+            });
+            
+            // 鼠标离开时隐藏提示框
+            document.addEventListener('mouseleave', handleBarChartMouseLeave);
         }
 
         // 事件监听
