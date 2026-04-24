@@ -1986,9 +1986,35 @@
             const numMonths = months.length;
             
             // 柱子宽度和间距
-            const groupWidth = chartWidth / numMonths;
-            const barWidth = groupWidth * 0.35;
-            const barGap = groupWidth * 0.15;
+            const maxBarWidth = 60; // 柱子最大宽度
+            const minBarGap = 20; // 柱子之间最小间距
+            const minGroupGap = 40; // 月份组之间最小间距
+            
+            // 计算理想的组宽度（基于最大柱子宽度）
+            const idealGroupWidth = maxBarWidth * 2 + minBarGap + minGroupGap;
+            
+            // 计算实际需要的总宽度
+            const totalIdealWidth = idealGroupWidth * numMonths;
+            
+            let groupWidth, barWidth, barGap, groupGap;
+            let startOffset = 0; // 起始偏移量，用于居中显示
+            
+            if (totalIdealWidth <= chartWidth) {
+                // 月份较少，按最大宽度显示，居中排列
+                groupWidth = idealGroupWidth;
+                barWidth = maxBarWidth;
+                barGap = minBarGap;
+                groupGap = minGroupGap;
+                // 计算居中偏移量
+                startOffset = (chartWidth - totalIdealWidth + minGroupGap) / 2;
+            } else {
+                // 月份较多，按比例缩小
+                groupWidth = chartWidth / numMonths;
+                barWidth = groupWidth * 0.35;
+                barGap = groupWidth * 0.15;
+                groupGap = groupWidth * 0.15;
+                startOffset = 0;
+            }
             
             // 保存柱子位置信息，用于检测鼠标悬停和点击
             const bars = [];
@@ -2023,7 +2049,7 @@
             
             // 绘制柱子
             months.forEach((monthData, index) => {
-                const groupX = padding.left + index * groupWidth + barGap;
+                const groupX = padding.left + startOffset + index * groupWidth;
                 
                 // 收入柱子（绿色）
                 const incomeHeight = (monthData.incomeTotal / maxAmount) * chartHeight;
