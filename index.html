@@ -1399,7 +1399,7 @@
             width: 100%;
             height: 100%;
             background: rgba(0,0,0,0.5);
-            z-index: 1001;
+            z-index: 1002;
             justify-content: center;
             align-items: center;
         }
@@ -1759,6 +1759,7 @@
                     <div class="form-group">
                         <label for="new-book-name">账本名称</label>
                         <input type="text" id="new-book-name" placeholder="请输入账本名称" required>
+                        <div class="book-name-error" id="new-book-name-error">账本名称已存在</div>
                     </div>
                     <button type="submit" class="btn-create-book">创建</button>
                 </form>
@@ -2264,14 +2265,12 @@
         // 创建新账本
         function createBook(name) {
             if (!name || name.trim() === '') {
-                alert('请输入账本名称');
-                return false;
+                return { success: false, error: '请输入账本名称' };
             }
 
             // 检查名称是否已存在
             if (isBookNameExists(name)) {
-                alert('账本名称已存在，请使用其他名称');
-                return false;
+                return { success: false, error: '账本名称已存在，请使用其他名称' };
             }
 
             const newBook = {
@@ -2286,7 +2285,7 @@
             // 切换到新账本
             switchBook(newBook.id);
 
-            return true;
+            return { success: true };
         }
 
         // 切换账本
@@ -2348,10 +2347,7 @@
                 nameDisplay.textContent = book.name;
             }
 
-            // 关闭账本列表弹窗
-            closeBookListModal();
-
-            // 打开删除确认弹窗
+            // 打开删除确认弹窗（不关闭账本列表弹窗）
             const modal = document.getElementById('delete-book-modal');
             if (modal) {
                 modal.classList.add('active');
@@ -2383,7 +2379,7 @@
             if (currentBookId === bookId && books.length > 0) {
                 switchBook(books[0].id);
             } else {
-                // 重新渲染账本列表
+                // 重新渲染账本列表（不关闭账本列表弹窗）
                 renderBookList();
             }
         }
@@ -2405,18 +2401,16 @@
         // 编辑账本名称
         function editBook(bookId, newName) {
             if (!newName || newName.trim() === '') {
-                alert('请输入账本名称');
-                return false;
+                return { success: false, error: '请输入账本名称' };
             }
 
             // 检查名称是否已存在（排除当前编辑的账本）
             if (isBookNameExists(newName, bookId)) {
-                alert('账本名称已存在，请使用其他名称');
-                return false;
+                return { success: false, error: '账本名称已存在，请使用其他名称' };
             }
 
             const bookIndex = books.findIndex(b => b.id === bookId);
-            if (bookIndex === -1) return false;
+            if (bookIndex === -1) return { success: false, error: '账本不存在' };
 
             books[bookIndex].name = newName.trim();
             saveBooks();
@@ -2429,7 +2423,7 @@
             // 重新渲染账本列表
             renderBookList();
 
-            return true;
+            return { success: true };
         }
 
         // 获取当前账本信息
@@ -2615,11 +2609,28 @@
                 createBookForm.addEventListener('submit', (e) => {
                     e.preventDefault();
                     const newBookNameInput = document.getElementById('new-book-name');
-                    if (newBookNameInput) {
+                    const errorElement = document.getElementById('new-book-name-error');
+                    if (newBookNameInput && errorElement) {
                         const name = newBookNameInput.value;
-                        if (createBook(name)) {
+                        const result = createBook(name);
+                        if (result.success) {
                             newBookNameInput.value = '';
+                            errorElement.classList.remove('show');
+                        } else {
+                            errorElement.textContent = result.error;
+                            errorElement.classList.add('show');
                         }
+                    }
+                });
+            }
+
+            // 新建账本输入框输入时隐藏错误提示
+            const newBookNameInput = document.getElementById('new-book-name');
+            if (newBookNameInput) {
+                newBookNameInput.addEventListener('input', () => {
+                    const errorElement = document.getElementById('new-book-name-error');
+                    if (errorElement) {
+                        errorElement.classList.remove('show');
                     }
                 });
             }
@@ -2653,12 +2664,29 @@
                     e.preventDefault();
                     const bookIdInput = document.getElementById('edit-book-id');
                     const bookNameInput = document.getElementById('edit-book-name');
-                    if (bookIdInput && bookNameInput) {
+                    const errorElement = document.getElementById('edit-book-name-error');
+                    if (bookIdInput && bookNameInput && errorElement) {
                         const bookId = bookIdInput.value;
                         const newName = bookNameInput.value;
-                        if (editBook(bookId, newName)) {
+                        const result = editBook(bookId, newName);
+                        if (result.success) {
                             closeEditBookModal();
+                            errorElement.classList.remove('show');
+                        } else {
+                            errorElement.textContent = result.error;
+                            errorElement.classList.add('show');
                         }
+                    }
+                });
+            }
+
+            // 编辑账本输入框输入时隐藏错误提示
+            const editBookNameInput = document.getElementById('edit-book-name');
+            if (editBookNameInput) {
+                editBookNameInput.addEventListener('input', () => {
+                    const errorElement = document.getElementById('edit-book-name-error');
+                    if (errorElement) {
+                        errorElement.classList.remove('show');
                     }
                 });
             }
