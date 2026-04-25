@@ -23,43 +23,45 @@
             margin: 0 auto;
         }
 
-        .header-section {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-        }
-
-        @media (max-width: 768px) {
-            .header-section {
-                flex-direction: column;
-                gap: 20px;
-            }
-        }
-
         h1 {
             text-align: center;
             color: white;
-            margin: 0;
+            margin-bottom: 30px;
             font-weight: 600;
             text-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
-        .btn-export {
+        .record-list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .record-list-header {
+                flex-direction: column;
+                gap: 10px;
+                align-items: flex-start;
+            }
+        }
+
+        .btn-export-small {
             background: linear-gradient(135deg, #10b981 0%, #059669 100%);
             color: white;
             width: auto;
-            padding: 12px 24px;
+            padding: 8px 16px;
             text-transform: none;
             letter-spacing: normal;
-            font-size: 14px;
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+            font-size: 13px;
+            border-radius: 6px;
+            box-shadow: 0 2px 10px rgba(16, 185, 129, 0.3);
+            margin: 0;
         }
 
-        .btn-export:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+        .btn-export-small:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
         }
 
         .summary-cards {
@@ -1045,10 +1047,7 @@
 </head>
 <body>
     <div class="container">
-        <div class="header-section">
-            <h1>💰 个人记账应用</h1>
-            <button class="btn btn-export" id="export-csv-btn">📥 导出 CSV</button>
-        </div>
+        <h1>💰 个人记账应用</h1>
 
         <!-- 汇总卡片 -->
         <div class="summary-cards">
@@ -1136,7 +1135,10 @@
 
             <!-- 右侧列表 -->
             <div class="card">
-                <h2 class="card-title">📋 记录列表</h2>
+                <div class="record-list-header">
+                    <h2 class="card-title">📋 记录列表</h2>
+                    <button class="btn btn-export-small" id="export-csv-btn">📥 导出 CSV（0 条）</button>
+                </div>
                 <div class="filter-section">
                     <div class="filter-row">
                         <button class="filter-btn active" data-filter="all">全部</button>
@@ -1364,6 +1366,38 @@
             }
             
             return fieldStr;
+        }
+
+        // 获取当前筛选后的记录数量
+        function getFilteredRecordsCount() {
+            let filteredRecords = records;
+            
+            // 先按类型筛选
+            if (currentFilter !== 'all') {
+                filteredRecords = filteredRecords.filter(record => record.type === currentFilter);
+            }
+
+            // 再按分类筛选
+            if (currentCategory !== 'all') {
+                filteredRecords = filteredRecords.filter(record => record.category === currentCategory);
+            }
+
+            // 按日期范围筛选
+            filteredRecords = filterByDateRange(filteredRecords);
+
+            // 最后按关键词筛选
+            filteredRecords = filterByKeyword(filteredRecords);
+
+            return filteredRecords.length;
+        }
+
+        // 更新导出按钮文字
+        function updateExportButtonText() {
+            const exportBtn = document.getElementById('export-csv-btn');
+            if (exportBtn) {
+                const count = getFilteredRecordsCount();
+                exportBtn.textContent = `📥 导出 CSV（${count} 条）`;
+            }
         }
 
         // 分类定义
@@ -2023,6 +2057,9 @@
 
             // 最后按关键词筛选
             filteredRecords = filterByKeyword(filteredRecords);
+
+            // 更新导出按钮文字
+            updateExportButtonText();
 
             if (filteredRecords.length === 0) {
                 renderEmptyState();
