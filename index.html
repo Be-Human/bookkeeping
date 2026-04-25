@@ -2389,6 +2389,17 @@
             const savedRules = localStorage.getItem(`bookkeeping_${currentBookId}_recurring`);
             if (savedRules) {
                 recurringRules = JSON.parse(savedRules);
+                
+                recurringRules.forEach(rule => {
+                    if (typeof rule.amount === 'string') {
+                        rule.amount = parseFloat(rule.amount);
+                    }
+                    if (typeof rule.interval === 'string') {
+                        rule.interval = parseInt(rule.interval);
+                    }
+                });
+                
+                saveRecurringRules();
             } else {
                 recurringRules = [];
             }
@@ -2403,12 +2414,12 @@
             const rule = {
                 id: 'recurring_' + Date.now(),
                 type: recordData.type,
-                amount: recordData.amount,
+                amount: parseFloat(recordData.amount),
                 category: recordData.category,
                 description: recordData.description,
                 startDate: recordData.date,
                 recurringType: recurringOptions.type,
-                interval: recurringOptions.interval,
+                interval: parseInt(recurringOptions.interval),
                 endDate: recurringOptions.endDate || null,
                 status: 'active',
                 lastGeneratedDate: null,
