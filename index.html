@@ -1055,11 +1055,358 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* 账本管理样式 */
+        .book-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            gap: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .book-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+
+        .book-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .book-icon {
+            font-size: 28px;
+        }
+
+        .book-name {
+            font-size: 20px;
+            font-weight: 600;
+            color: white;
+        }
+
+        .book-badge {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .book-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .btn-book {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-book:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-1px);
+        }
+
+        /* 账本列表弹窗 */
+        .book-list-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .book-list-modal.active {
+            display: flex;
+        }
+
+        .book-list-container {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        }
+
+        .book-list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .book-list-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .book-list-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #999;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .book-list-close:hover {
+            color: #666;
+        }
+
+        .book-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            background: #f9fafb;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .book-item:hover {
+            background: #f3f4f6;
+        }
+
+        .book-item.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-color: #667eea;
+        }
+
+        .book-item.active .book-item-name {
+            color: white;
+        }
+
+        .book-item.active .book-item-count {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .book-item-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+            cursor: pointer;
+        }
+
+        .book-item-icon {
+            font-size: 24px;
+        }
+
+        .book-item-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .book-item-name {
+            font-size: 15px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .book-item-count {
+            font-size: 12px;
+            color: #888;
+        }
+
+        .book-item-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-book-action {
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+        }
+
+        .btn-book-edit {
+            background: #dbeafe;
+            color: #2563eb;
+        }
+
+        .btn-book-edit:hover {
+            background: #2563eb;
+            color: white;
+        }
+
+        .btn-book-delete {
+            background: #fee2e2;
+            color: #ef4444;
+        }
+
+        .btn-book-delete:hover {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-book-delete:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .book-create-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #f0f0f0;
+        }
+
+        .book-create-section .section-subtitle {
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+
+        .book-create-form {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        @media (max-width: 768px) {
+            .book-create-form {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+
+        .book-create-form .form-group {
+            margin-bottom: 0;
+            flex: 1;
+        }
+
+        .book-create-form .form-group input {
+            width: 100%;
+        }
+
+        .btn-create-book {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            white-space: nowrap;
+        }
+
+        .btn-create-book:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        /* 编辑账本弹窗 */
+        .edit-book-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1001;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .edit-book-modal.active {
+            display: flex;
+        }
+
+        .edit-book-container {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        }
+
+        .edit-book-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .edit-book-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .edit-book-close {
+            background: none;
+            border: none;
+            font-size: 20px;
+            color: #999;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .edit-book-close:hover {
+            color: #666;
+        }
+
+        .edit-book-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .edit-book-buttons .btn {
+            flex: 1;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>💰 个人记账应用</h1>
+
+        <!-- 账本管理区域 -->
+        <div class="book-header" id="book-header">
+            <div class="book-info">
+                <span class="book-icon">📚</span>
+                <span class="book-name" id="current-book-name">默认账本</span>
+                <span class="book-badge" id="book-record-count">0 条记录</span>
+            </div>
+            <div class="book-actions">
+                <button class="btn-book" id="switch-book-btn">🔄 切换账本</button>
+                <button class="btn-book" id="create-book-btn">➕ 新建账本</button>
+            </div>
+        </div>
 
         <!-- 汇总卡片 -->
         <div class="summary-cards">
@@ -1277,7 +1624,55 @@
         </div>
     </div>
 
+    <!-- 账本列表弹窗 -->
+    <div id="book-list-modal" class="book-list-modal">
+        <div class="book-list-container">
+            <div class="book-list-header">
+                <h3 class="book-list-title">📚 账本管理</h3>
+                <button class="book-list-close" id="book-list-close">&times;</button>
+            </div>
+            <div id="book-list-container">
+                <!-- 账本列表将通过 JavaScript 动态生成 -->
+            </div>
+            <div class="book-create-section">
+                <h4 class="section-subtitle">➕ 新建账本</h4>
+                <form id="create-book-form" class="book-create-form">
+                    <div class="form-group">
+                        <label for="new-book-name">账本名称</label>
+                        <input type="text" id="new-book-name" placeholder="请输入账本名称" required>
+                    </div>
+                    <button type="submit" class="btn-create-book">创建</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 编辑账本弹窗 -->
+    <div id="edit-book-modal" class="edit-book-modal">
+        <div class="edit-book-container">
+            <div class="edit-book-header">
+                <h3 class="edit-book-title" id="edit-book-title">✏️ 编辑账本</h3>
+                <button class="edit-book-close" id="edit-book-close">&times;</button>
+            </div>
+            <form id="edit-book-form">
+                <input type="hidden" id="edit-book-id">
+                <div class="form-group">
+                    <label for="edit-book-name">账本名称</label>
+                    <input type="text" id="edit-book-name" placeholder="请输入账本名称" required>
+                </div>
+                <div class="edit-book-buttons">
+                    <button type="submit" class="btn btn-primary">保存</button>
+                    <button type="button" class="btn" id="cancel-edit-book" style="background: #f3f4f6; color: #333;">取消</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
+        // 账本管理
+        let books = [];
+        let currentBookId = null;
+
         // 数据管理
         let records = [];
         let currentFilter = 'all';
@@ -1479,8 +1874,49 @@
         let budgetCardsContainer = document.getElementById('budget-cards-container');
         let budgetEmptyState = document.getElementById('budget-empty-state');
 
+        // 迁移旧数据到新的多账本结构
+        function migrateOldData() {
+            // 检查是否有旧数据（使用旧的 key）
+            const oldRecords = localStorage.getItem('bookkeeping_records');
+            const oldBudgets = localStorage.getItem('bookkeeping_budgets');
+            
+            // 检查是否已经有账本数据
+            const hasBooks = localStorage.getItem('bookkeeping_books') !== null;
+            
+            if ((oldRecords || oldBudgets) && !hasBooks) {
+                // 初始化默认账本
+                books = [
+                    {
+                        id: 'default',
+                        name: '默认账本',
+                        createdAt: new Date().toISOString()
+                    }
+                ];
+                saveBooks();
+                
+                // 迁移旧数据到默认账本
+                if (oldRecords) {
+                    localStorage.setItem('bookkeeping_default_records', oldRecords);
+                }
+                if (oldBudgets) {
+                    localStorage.setItem('bookkeeping_default_budgets', oldBudgets);
+                }
+                
+                // 设置当前账本为默认账本
+                currentBookId = 'default';
+                saveCurrentBookId();
+                
+                console.log('数据已迁移到多账本系统');
+            }
+        }
+
         // 初始化
         function init() {
+            // 初始化账本系统
+            loadBooks();
+            migrateOldData();
+            loadCurrentBookId();
+            
             // 设置默认日期为今天
             const today = new Date().toISOString().split('T')[0];
             dateInput.value = today;
@@ -1494,12 +1930,18 @@
             // 初始化搜索事件监听
             initSearchEvents();
 
+            // 初始化账本管理事件
+            initBookEvents();
+
             // 从 localStorage 加载数据
             loadRecords();
             loadBudgets();
 
             // 初始化预算管理事件
             initBudgetEvents();
+
+            // 更新当前账本显示
+            updateCurrentBookDisplay();
 
             // 渲染数据
             updateSummary();
@@ -1578,28 +2020,435 @@
 
         // 从 localStorage 加载记录
         function loadRecords() {
-            const savedRecords = localStorage.getItem('bookkeeping_records');
+            if (!currentBookId) {
+                records = [];
+                return;
+            }
+            const savedRecords = localStorage.getItem(`bookkeeping_${currentBookId}_records`);
             if (savedRecords) {
                 records = JSON.parse(savedRecords);
+            } else {
+                records = [];
             }
         }
 
         // 保存记录到 localStorage
         function saveRecords() {
-            localStorage.setItem('bookkeeping_records', JSON.stringify(records));
+            if (!currentBookId) return;
+            localStorage.setItem(`bookkeeping_${currentBookId}_records`, JSON.stringify(records));
         }
 
         // 从 localStorage 加载预算
         function loadBudgets() {
-            const savedBudgets = localStorage.getItem('bookkeeping_budgets');
+            if (!currentBookId) {
+                budgets = {};
+                return;
+            }
+            const savedBudgets = localStorage.getItem(`bookkeeping_${currentBookId}_budgets`);
             if (savedBudgets) {
                 budgets = JSON.parse(savedBudgets);
+            } else {
+                budgets = {};
             }
         }
 
         // 保存预算到 localStorage
         function saveBudgets() {
-            localStorage.setItem('bookkeeping_budgets', JSON.stringify(budgets));
+            if (!currentBookId) return;
+            localStorage.setItem(`bookkeeping_${currentBookId}_budgets`, JSON.stringify(budgets));
+        }
+
+        // 账本管理函数
+
+        // 从 localStorage 加载账本列表
+        function loadBooks() {
+            const savedBooks = localStorage.getItem('bookkeeping_books');
+            if (savedBooks) {
+                books = JSON.parse(savedBooks);
+            } else {
+                // 初始化默认账本
+                books = [
+                    {
+                        id: 'default',
+                        name: '默认账本',
+                        createdAt: new Date().toISOString()
+                    }
+                ];
+                saveBooks();
+            }
+        }
+
+        // 保存账本列表到 localStorage
+        function saveBooks() {
+            localStorage.setItem('bookkeeping_books', JSON.stringify(books));
+        }
+
+        // 从 localStorage 加载当前账本ID
+        function loadCurrentBookId() {
+            const savedCurrentBookId = localStorage.getItem('bookkeeping_current_book');
+            if (savedCurrentBookId) {
+                currentBookId = savedCurrentBookId;
+            } else {
+                // 默认使用第一个账本
+                if (books.length > 0) {
+                    currentBookId = books[0].id;
+                    saveCurrentBookId();
+                }
+            }
+        }
+
+        // 保存当前账本ID到 localStorage
+        function saveCurrentBookId() {
+            if (currentBookId) {
+                localStorage.setItem('bookkeeping_current_book', currentBookId);
+            }
+        }
+
+        // 创建新账本
+        function createBook(name) {
+            if (!name || name.trim() === '') {
+                alert('请输入账本名称');
+                return false;
+            }
+
+            const newBook = {
+                id: 'book_' + Date.now(),
+                name: name.trim(),
+                createdAt: new Date().toISOString()
+            };
+
+            books.push(newBook);
+            saveBooks();
+
+            // 切换到新账本
+            switchBook(newBook.id);
+
+            return true;
+        }
+
+        // 切换账本
+        function switchBook(bookId) {
+            const book = books.find(b => b.id === bookId);
+            if (!book) return;
+
+            currentBookId = bookId;
+            saveCurrentBookId();
+
+            // 重新加载数据
+            loadRecords();
+            loadBudgets();
+
+            // 重置筛选条件
+            currentFilter = 'all';
+            currentCategory = 'all';
+            startDate = null;
+            endDate = null;
+            searchKeyword = '';
+
+            // 更新UI
+            updateCurrentBookDisplay();
+            updateFilterButtons();
+            startDateInput.value = '';
+            endDateInput.value = '';
+            searchInput.value = '';
+
+            // 重新渲染所有数据
+            updateSummary();
+            renderCategoryFilters();
+            renderRecords();
+            updateChart();
+            updateBarChart();
+            renderBudgetForm();
+            renderBudgetOverview();
+
+            // 关闭账本列表弹窗
+            closeBookListModal();
+        }
+
+        // 删除账本
+        function deleteBook(bookId) {
+            const book = books.find(b => b.id === bookId);
+            if (!book) return;
+
+            // 不能删除默认账本（如果只有一个账本）
+            if (books.length <= 1) {
+                alert('至少需要保留一个账本');
+                return;
+            }
+
+            if (confirm(`确定要删除账本「${book.name}」吗？该账本的所有记录和预算数据将被永久删除。`)) {
+                // 从账本列表中移除
+                books = books.filter(b => b.id !== bookId);
+                saveBooks();
+
+                // 删除该账本的数据
+                localStorage.removeItem(`bookkeeping_${bookId}_records`);
+                localStorage.removeItem(`bookkeeping_${bookId}_budgets`);
+
+                // 如果删除的是当前账本，切换到第一个账本
+                if (currentBookId === bookId && books.length > 0) {
+                    switchBook(books[0].id);
+                } else {
+                    // 重新渲染账本列表
+                    renderBookList();
+                }
+            }
+        }
+
+        // 编辑账本名称
+        function editBook(bookId, newName) {
+            if (!newName || newName.trim() === '') {
+                alert('请输入账本名称');
+                return false;
+            }
+
+            const bookIndex = books.findIndex(b => b.id === bookId);
+            if (bookIndex === -1) return false;
+
+            books[bookIndex].name = newName.trim();
+            saveBooks();
+
+            // 如果是当前账本，更新显示
+            if (currentBookId === bookId) {
+                updateCurrentBookDisplay();
+            }
+
+            // 重新渲染账本列表
+            renderBookList();
+
+            return true;
+        }
+
+        // 获取当前账本信息
+        function getCurrentBook() {
+            return books.find(b => b.id === currentBookId);
+        }
+
+        // 更新当前账本显示
+        function updateCurrentBookDisplay() {
+            const bookNameEl = document.getElementById('current-book-name');
+            const recordCountEl = document.getElementById('book-record-count');
+
+            const currentBook = getCurrentBook();
+            if (currentBook && bookNameEl) {
+                bookNameEl.textContent = currentBook.name;
+            }
+
+            if (recordCountEl) {
+                recordCountEl.textContent = `${records.length} 条记录`;
+            }
+        }
+
+        // 渲染账本列表
+        function renderBookList() {
+            const container = document.getElementById('book-list-container');
+            if (!container) return;
+
+            container.innerHTML = '';
+
+            if (books.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>暂无账本</p></div>';
+                return;
+            }
+
+            books.forEach(book => {
+                // 获取该账本的记录数
+                const bookRecords = localStorage.getItem(`bookkeeping_${book.id}_records`);
+                const recordCount = bookRecords ? JSON.parse(bookRecords).length : 0;
+
+                const isActive = book.id === currentBookId;
+
+                const bookItem = document.createElement('div');
+                bookItem.className = 'book-item' + (isActive ? ' active' : '');
+
+                bookItem.innerHTML = `
+                    <div class="book-item-left" data-book-id="${book.id}">
+                        <span class="book-item-icon">📚</span>
+                        <div class="book-item-info">
+                            <div class="book-item-name">${book.name}</div>
+                            <div class="book-item-count">${recordCount} 条记录</div>
+                        </div>
+                    </div>
+                    <div class="book-item-actions">
+                        <button class="btn-book-action btn-book-edit" data-book-id="${book.id}">编辑</button>
+                        <button class="btn-book-action btn-book-delete" data-book-id="${book.id}" ${books.length <= 1 ? 'disabled' : ''}>删除</button>
+                    </div>
+                `;
+
+                container.appendChild(bookItem);
+            });
+
+            // 添加事件监听
+            // 点击账本切换
+            container.querySelectorAll('.book-item-left').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    // 如果点击的是编辑或删除按钮，不触发切换
+                    if (e.target.closest('.btn-book-action')) return;
+                    
+                    const bookId = item.dataset.bookId;
+                    if (bookId !== currentBookId) {
+                        switchBook(bookId);
+                    }
+                });
+            });
+
+            // 编辑按钮
+            container.querySelectorAll('.btn-book-edit').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const bookId = btn.dataset.bookId;
+                    openEditBookModal(bookId);
+                });
+            });
+
+            // 删除按钮
+            container.querySelectorAll('.btn-book-delete').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const bookId = btn.dataset.bookId;
+                    deleteBook(bookId);
+                });
+            });
+        }
+
+        // 打开账本列表弹窗
+        function openBookListModal() {
+            const modal = document.getElementById('book-list-modal');
+            if (modal) {
+                renderBookList();
+                modal.classList.add('active');
+            }
+        }
+
+        // 关闭账本列表弹窗
+        function closeBookListModal() {
+            const modal = document.getElementById('book-list-modal');
+            if (modal) {
+                modal.classList.remove('active');
+            }
+        }
+
+        // 打开编辑账本弹窗
+        function openEditBookModal(bookId) {
+            const book = books.find(b => b.id === bookId);
+            if (!book) return;
+
+            const modal = document.getElementById('edit-book-modal');
+            const bookIdInput = document.getElementById('edit-book-id');
+            const bookNameInput = document.getElementById('edit-book-name');
+            const titleEl = document.getElementById('edit-book-title');
+
+            if (modal && bookIdInput && bookNameInput) {
+                bookIdInput.value = book.id;
+                bookNameInput.value = book.name;
+                if (titleEl) {
+                    titleEl.textContent = '✏️ 编辑账本';
+                }
+                modal.classList.add('active');
+                bookNameInput.focus();
+            }
+        }
+
+        // 关闭编辑账本弹窗
+        function closeEditBookModal() {
+            const modal = document.getElementById('edit-book-modal');
+            if (modal) {
+                modal.classList.remove('active');
+            }
+        }
+
+        // 初始化账本管理事件
+        function initBookEvents() {
+            // 切换账本按钮
+            const switchBookBtn = document.getElementById('switch-book-btn');
+            if (switchBookBtn) {
+                switchBookBtn.addEventListener('click', openBookListModal);
+            }
+
+            // 新建账本按钮
+            const createBookBtn = document.getElementById('create-book-btn');
+            if (createBookBtn) {
+                createBookBtn.addEventListener('click', () => {
+                    openBookListModal();
+                    // 聚焦到新建账本输入框
+                    setTimeout(() => {
+                        const newBookNameInput = document.getElementById('new-book-name');
+                        if (newBookNameInput) {
+                            newBookNameInput.focus();
+                        }
+                    }, 100);
+                });
+            }
+
+            // 账本列表弹窗关闭按钮
+            const bookListClose = document.getElementById('book-list-close');
+            if (bookListClose) {
+                bookListClose.addEventListener('click', closeBookListModal);
+            }
+
+            // 点击弹窗外部关闭
+            const bookListModal = document.getElementById('book-list-modal');
+            if (bookListModal) {
+                bookListModal.addEventListener('click', (e) => {
+                    if (e.target === bookListModal) {
+                        closeBookListModal();
+                    }
+                });
+            }
+
+            // 新建账本表单提交
+            const createBookForm = document.getElementById('create-book-form');
+            if (createBookForm) {
+                createBookForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const newBookNameInput = document.getElementById('new-book-name');
+                    if (newBookNameInput) {
+                        const name = newBookNameInput.value;
+                        if (createBook(name)) {
+                            newBookNameInput.value = '';
+                        }
+                    }
+                });
+            }
+
+            // 编辑账本弹窗关闭按钮
+            const editBookClose = document.getElementById('edit-book-close');
+            if (editBookClose) {
+                editBookClose.addEventListener('click', closeEditBookModal);
+            }
+
+            // 取消编辑账本
+            const cancelEditBook = document.getElementById('cancel-edit-book');
+            if (cancelEditBook) {
+                cancelEditBook.addEventListener('click', closeEditBookModal);
+            }
+
+            // 点击编辑账本弹窗外部关闭
+            const editBookModal = document.getElementById('edit-book-modal');
+            if (editBookModal) {
+                editBookModal.addEventListener('click', (e) => {
+                    if (e.target === editBookModal) {
+                        closeEditBookModal();
+                    }
+                });
+            }
+
+            // 编辑账本表单提交
+            const editBookForm = document.getElementById('edit-book-form');
+            if (editBookForm) {
+                editBookForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const bookIdInput = document.getElementById('edit-book-id');
+                    const bookNameInput = document.getElementById('edit-book-name');
+                    if (bookIdInput && bookNameInput) {
+                        const bookId = bookIdInput.value;
+                        const newName = bookNameInput.value;
+                        if (editBook(bookId, newName)) {
+                            closeEditBookModal();
+                        }
+                    }
+                });
+            }
         }
 
         // 初始化预算管理事件
