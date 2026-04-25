@@ -1603,10 +1603,55 @@
                         <label for="description">描述</label>
                         <textarea id="description" placeholder="请输入描述信息"></textarea>
                     </div>
+                    
+                    <!-- 标签选择 -->
+                    <div class="form-group">
+                        <label for="tags-input">标签</label>
+                        <div style="position: relative;">
+                            <input type="text" id="tags-input" placeholder="输入标签名称，按回车添加" style="width: 100%; padding: 12px 16px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; transition: border-color 0.3s ease; font-family: inherit;">
+                            <div id="tags-dropdown" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 8px 8px; max-height: 150px; overflow-y: auto; z-index: 100;"></div>
+                        </div>
+                        <div id="selected-tags-container" style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;"></div>
+                    </div>
+                    
                     <div class="form-group">
                         <label for="date">日期</label>
                         <input type="date" id="date" required>
                     </div>
+                    
+                    <!-- 周期性记录选项 -->
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="is-recurring" style="width: auto; margin: 0;">
+                            <span>设置为周期性记录</span>
+                        </label>
+                    </div>
+                    
+                    <div id="recurring-options" style="display: none; padding: 15px; background: #f9fafb; border-radius: 8px; margin-bottom: 16px;">
+                        <div class="form-group" style="margin-bottom: 12px;">
+                            <label for="recurring-type">重复频率</label>
+                            <select id="recurring-type">
+                                <option value="daily">每天</option>
+                                <option value="weekly">每周</option>
+                                <option value="monthly">每月</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group" style="margin-bottom: 12px;">
+                            <label for="recurring-interval">间隔周期</label>
+                            <input type="number" id="recurring-interval" min="1" max="365" value="1" placeholder="例如：每2天">
+                        </div>
+                        
+                        <div class="form-group" style="margin-bottom: 12px;">
+                            <label for="recurring-end-date">结束日期（可选）</label>
+                            <input type="date" id="recurring-end-date">
+                        </div>
+                        
+                        <div style="font-size: 12px; color: #666;">
+                            提示：周期性记录会在到期时自动生成，您可以在周期性记录管理中查看和管理所有周期规则。
+                        </div>
+                    </div>
+                    
                     <button type="submit" class="btn btn-primary">添加记录</button>
                 </form>
             </div>
@@ -1615,7 +1660,11 @@
             <div class="card">
                 <div class="record-list-header">
                     <h2 class="card-title">📋 记录列表</h2>
-                    <button class="btn btn-export-small" id="export-csv-btn">📥 导出 CSV（0 条）</button>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button class="btn btn-export-small" id="manage-recurring-btn">🔄 周期记录</button>
+                        <button class="btn btn-export-small" id="import-csv-btn">📤 导入 CSV</button>
+                        <button class="btn btn-export-small" id="export-csv-btn">📥 导出 CSV（0 条）</button>
+                    </div>
                 </div>
                 <div class="filter-section">
                     <div class="filter-row">
@@ -1624,6 +1673,13 @@
                         <button class="filter-btn" data-filter="expense">支出</button>
                         <div id="category-filters-container">
                             <!-- 分类筛选按钮将通过 JavaScript 动态生成 -->
+                        </div>
+                    </div>
+                    
+                    <!-- 标签筛选 -->
+                    <div class="filter-row" id="tag-filter-row" style="display: none;">
+                        <div id="tag-filters-container" style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                            <!-- 标签筛选按钮将通过 JavaScript 动态生成 -->
                         </div>
                     </div>
                     <div class="filter-row">
@@ -1816,6 +1872,84 @@
         </div>
     </div>
 
+    <!-- 导入CSV预览弹窗 -->
+    <div id="import-csv-modal" class="modal">
+        <div class="card" style="width: 95%; max-width: 900px; max-height: 90vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #f0f0f0;">
+                <h2 class="card-title" style="margin-bottom: 0; border-bottom: none; padding-bottom: 0;">📤 导入 CSV 记录</h2>
+                <button class="import-close" id="import-close" style="background: none; border: none; font-size: 24px; color: #999; cursor: pointer; transition: color 0.3s ease;">&times;</button>
+            </div>
+            
+            <!-- 选择文件区域 -->
+            <div id="import-file-section" style="margin-bottom: 20px;">
+                <div class="form-group">
+                    <label for="csv-file-input">选择 CSV 文件</label>
+                    <input type="file" id="csv-file-input" accept=".csv" style="width: 100%; padding: 12px; border: 2px dashed #e0e0e0; border-radius: 8px; background: #f9fafb; cursor: pointer;">
+                </div>
+                <div style="font-size: 12px; color: #666; margin-top: 8px;">
+                    <strong>格式说明：</strong>CSV 文件应包含以下列：日期、类型（收入/支出）、分类、描述、金额<br>
+                    格式与导出功能生成的 CSV 文件一致。
+                </div>
+            </div>
+
+            <!-- 预览区域 -->
+            <div id="import-preview-section" style="display: none; margin-bottom: 20px;">
+                <h3 style="font-size: 16px; font-weight: 600; color: #333; margin-bottom: 15px;">预览导入内容</h3>
+                <div style="overflow-x: auto; border: 1px solid #e0e0e0; border-radius: 8px;">
+                    <table id="import-preview-table" style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: #f9fafb;">
+                                <th style="padding: 12px; text-align: left; border-bottom: 1px solid #e0e0e0; font-size: 13px; font-weight: 600; color: #333;">日期</th>
+                                <th style="padding: 12px; text-align: left; border-bottom: 1px solid #e0e0e0; font-size: 13px; font-weight: 600; color: #333;">类型</th>
+                                <th style="padding: 12px; text-align: left; border-bottom: 1px solid #e0e0e0; font-size: 13px; font-weight: 600; color: #333;">分类</th>
+                                <th style="padding: 12px; text-align: left; border-bottom: 1px solid #e0e0e0; font-size: 13px; font-weight: 600; color: #333;">描述</th>
+                                <th style="padding: 12px; text-align: right; border-bottom: 1px solid #e0e0e0; font-size: 13px; font-weight: 600; color: #333;">金额</th>
+                                <th style="padding: 12px; text-align: center; border-bottom: 1px solid #e0e0e0; font-size: 13px; font-weight: 600; color: #333;">状态</th>
+                            </tr>
+                        </thead>
+                        <tbody id="import-preview-tbody">
+                            <!-- 预览数据将通过 JavaScript 动态生成 -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- 导入统计信息 -->
+                <div id="import-stats" style="margin-top: 15px; padding: 12px; background: #f9fafb; border-radius: 8px; font-size: 13px; color: #555;">
+                    <span id="import-total-count">共 0 条记录</span>
+                    <span id="import-valid-count" style="margin-left: 15px; color: #10b981;">有效：0 条</span>
+                    <span id="import-invalid-count" style="margin-left: 15px; color: #ef4444;">无效：0 条</span>
+                </div>
+            </div>
+
+            <!-- 按钮区域 -->
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button type="button" class="btn btn-primary" id="confirm-import-btn" style="flex: 1; display: none;">确认导入</button>
+                <button type="button" class="btn" id="cancel-import-btn" style="flex: 1; background: #f3f4f6; color: #333;">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 周期性记录管理弹窗 -->
+    <div id="recurring-modal" class="modal">
+        <div class="card" style="width: 95%; max-width: 900px; max-height: 90vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #f0f0f0;">
+                <h2 class="card-title" style="margin-bottom: 0; border-bottom: none; padding-bottom: 0;">🔄 周期性记录管理</h2>
+                <button class="recurring-close" id="recurring-close" style="background: none; border: none; font-size: 24px; color: #999; cursor: pointer; transition: color 0.3s ease;">&times;</button>
+            </div>
+            
+            <!-- 周期性记录列表 -->
+            <div id="recurring-list-container" style="margin-bottom: 20px;">
+                <!-- 周期性记录将通过 JavaScript 动态生成 -->
+            </div>
+
+            <!-- 空状态 -->
+            <div id="recurring-empty-state" class="empty-state" style="display: none;">
+                <div class="empty-state-icon">🔄</div>
+                <p>暂无周期性记录，添加记录时可以设置为周期性记录</p>
+            </div>
+        </div>
+    </div>
+
     <script>
         // 账本管理
         let books = [];
@@ -1832,6 +1966,17 @@
 
         // 预算管理
         let budgets = {};
+
+        // 导入CSV相关变量
+        let importedRecords = [];
+
+        // 周期性记录相关变量
+        let recurringRules = [];
+
+        // 标签相关变量
+        let allTags = [];
+        let selectedTags = [];
+        let currentTagFilter = 'all';
 
         // 导出CSV功能
         function exportToCSV() {
@@ -1954,6 +2099,771 @@
                 const count = getFilteredRecordsCount();
                 exportBtn.textContent = `📥 导出 CSV（${count} 条）`;
             }
+        }
+
+        // 导入CSV功能
+        function openImportModal() {
+            const modal = document.getElementById('import-csv-modal');
+            if (modal) {
+                resetImportModal();
+                modal.classList.add('active');
+            }
+        }
+
+        function closeImportModal() {
+            const modal = document.getElementById('import-csv-modal');
+            if (modal) {
+                modal.classList.remove('active');
+            }
+        }
+
+        function resetImportModal() {
+            importedRecords = [];
+            const fileInput = document.getElementById('csv-file-input');
+            const previewSection = document.getElementById('import-preview-section');
+            const confirmBtn = document.getElementById('confirm-import-btn');
+            
+            if (fileInput) fileInput.value = '';
+            if (previewSection) previewSection.style.display = 'none';
+            if (confirmBtn) confirmBtn.style.display = 'none';
+        }
+
+        function parseCSV(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const content = e.target.result;
+                        const lines = content.split(/\r?\n/).filter(line => line.trim() !== '');
+                        
+                        if (lines.length < 2) {
+                            reject(new Error('CSV 文件格式不正确，至少需要包含表头和一行数据'));
+                            return;
+                        }
+
+                        const headers = parseCSVLine(lines[0]);
+                        const records = [];
+
+                        for (let i = 1; i < lines.length; i++) {
+                            const values = parseCSVLine(lines[i]);
+                            if (values.length > 0) {
+                                const record = {};
+                                headers.forEach((header, index) => {
+                                    record[header.trim()] = values[index] || '';
+                                });
+                                records.push(record);
+                            }
+                        }
+
+                        resolve(records);
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+                reader.onerror = () => {
+                    reject(new Error('读取文件失败'));
+                };
+                reader.readAsText(file, 'UTF-8');
+            });
+        }
+
+        function parseCSVLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                
+                if (char === '"') {
+                    if (inQuotes && line[i + 1] === '"') {
+                        current += '"';
+                        i++;
+                    } else {
+                        inQuotes = !inQuotes;
+                    }
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            result.push(current.trim());
+            
+            return result;
+        }
+
+        function validateImportedRecord(record) {
+            const errors = [];
+            const validRecord = {};
+
+            // 检查日期
+            let date = record['日期'] || record['date'] || '';
+            if (!date) {
+                errors.push('缺少日期');
+            } else {
+                const dateObj = new Date(date);
+                if (isNaN(dateObj.getTime())) {
+                    errors.push('日期格式不正确');
+                } else {
+                    validRecord.date = date;
+                }
+            }
+
+            // 检查类型
+            let type = record['类型'] || record['type'] || '';
+            if (!type) {
+                errors.push('缺少类型');
+            } else {
+                type = type.trim();
+                if (type === '收入' || type === 'income') {
+                    validRecord.type = 'income';
+                } else if (type === '支出' || type === 'expense') {
+                    validRecord.type = 'expense';
+                } else {
+                    errors.push('类型必须是"收入"或"支出"');
+                }
+            }
+
+            // 检查分类
+            let category = record['分类'] || record['category'] || '';
+            if (!category) {
+                errors.push('缺少分类');
+            } else {
+                const validCategories = categories[validRecord.type] || [];
+                if (!validCategories.includes(category)) {
+                    errors.push(`分类"${category}"不属于${validRecord.type === 'income' ? '收入' : '支出'}分类`);
+                } else {
+                    validRecord.category = category;
+                }
+            }
+
+            // 检查描述（可选）
+            validRecord.description = (record['描述'] || record['description'] || '').trim();
+
+            // 检查金额
+            let amount = record['金额'] || record['amount'] || '';
+            if (!amount) {
+                errors.push('缺少金额');
+            } else {
+                const amountNum = parseFloat(amount);
+                if (isNaN(amountNum) || amountNum <= 0) {
+                    errors.push('金额必须是大于0的数字');
+                } else {
+                    validRecord.amount = amountNum;
+                }
+            }
+
+            return {
+                valid: errors.length === 0,
+                errors: errors,
+                record: validRecord
+            };
+        }
+
+        async function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            try {
+                const rawRecords = await parseCSV(file);
+                importedRecords = [];
+
+                rawRecords.forEach(rawRecord => {
+                    const validation = validateImportedRecord(rawRecord);
+                    importedRecords.push({
+                        raw: rawRecord,
+                        validated: validation.record,
+                        valid: validation.valid,
+                        errors: validation.errors
+                    });
+                });
+
+                renderImportPreview();
+            } catch (error) {
+                alert('解析 CSV 文件失败：' + error.message);
+            }
+        }
+
+        function renderImportPreview() {
+            const previewSection = document.getElementById('import-preview-section');
+            const tbody = document.getElementById('import-preview-tbody');
+            const confirmBtn = document.getElementById('confirm-import-btn');
+            const totalCountEl = document.getElementById('import-total-count');
+            const validCountEl = document.getElementById('import-valid-count');
+            const invalidCountEl = document.getElementById('import-invalid-count');
+
+            if (!previewSection || !tbody || !confirmBtn || !totalCountEl || !validCountEl || !invalidCountEl) {
+                return;
+            }
+
+            let validCount = 0;
+            let invalidCount = 0;
+
+            tbody.innerHTML = '';
+
+            importedRecords.forEach(item => {
+                if (item.valid) {
+                    validCount++;
+                } else {
+                    invalidCount++;
+                }
+
+                const tr = document.createElement('tr');
+                tr.style.backgroundColor = item.valid ? 'inherit' : '#fef2f2';
+                
+                const typeDisplay = item.valid ? (item.validated.type === 'income' ? '收入' : '支出') : (item.raw['类型'] || item.raw['type'] || '-');
+                const amountDisplay = item.valid ? item.validated.amount.toFixed(2) : (item.raw['金额'] || item.raw['amount'] || '-');
+                
+                tr.innerHTML = `
+                    <td style="padding: 10px; border-bottom: 1px solid #e0e0e0; font-size: 13px;">${item.valid ? item.validated.date : (item.raw['日期'] || item.raw['date'] || '-')}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #e0e0e0; font-size: 13px; color: ${typeDisplay === '收入' ? '#10b981' : (typeDisplay === '支出' ? '#ef4444' : '#666')}">${typeDisplay}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #e0e0e0; font-size: 13px;">${item.valid ? item.validated.category : (item.raw['分类'] || item.raw['category'] || '-')}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #e0e0e0; font-size: 13px; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${item.valid ? item.validated.description : (item.raw['描述'] || item.raw['description'] || '')}">${item.valid ? item.validated.description : (item.raw['描述'] || item.raw['description'] || '-')}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #e0e0e0; font-size: 13px; text-align: right; font-weight: 500;">${amountDisplay}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #e0e0e0; font-size: 13px; text-align: center;">
+                        ${item.valid ? 
+                            '<span style="color: #10b981; font-weight: 500;">✓ 有效</span>' : 
+                            '<span style="color: #ef4444; font-weight: 500;" title="' + item.errors.join('; ') + '">✗ 无效</span>'
+                        }
+                    </td>
+                `;
+
+                tbody.appendChild(tr);
+            });
+
+            totalCountEl.textContent = `共 ${importedRecords.length} 条记录`;
+            validCountEl.textContent = `有效：${validCount} 条`;
+            invalidCountEl.textContent = `无效：${invalidCount} 条`;
+
+            previewSection.style.display = 'block';
+            
+            if (validCount > 0) {
+                confirmBtn.style.display = 'block';
+            } else {
+                confirmBtn.style.display = 'none';
+            }
+        }
+
+        function confirmImport() {
+            const validRecords = importedRecords.filter(item => item.valid);
+            
+            if (validRecords.length === 0) {
+                alert('没有有效的记录可以导入');
+                return;
+            }
+
+            const confirmed = confirm(`确定要导入 ${validRecords.length} 条记录吗？`);
+            if (!confirmed) return;
+
+            validRecords.forEach(item => {
+                const newRecord = {
+                    id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+                    type: item.validated.type,
+                    amount: item.validated.amount,
+                    category: item.validated.category,
+                    description: item.validated.description,
+                    date: item.validated.date
+                };
+                records.unshift(newRecord);
+            });
+
+            saveRecords();
+            updateSummary();
+            renderRecords();
+            updateChart();
+            updateBarChart();
+            renderBudgetOverview();
+
+            alert(`成功导入 ${validRecords.length} 条记录！`);
+            closeImportModal();
+        }
+
+        // 周期性记录功能
+        function loadRecurringRules() {
+            if (!currentBookId) {
+                recurringRules = [];
+                return;
+            }
+            const savedRules = localStorage.getItem(`bookkeeping_${currentBookId}_recurring`);
+            if (savedRules) {
+                recurringRules = JSON.parse(savedRules);
+            } else {
+                recurringRules = [];
+            }
+        }
+
+        function saveRecurringRules() {
+            if (!currentBookId) return;
+            localStorage.setItem(`bookkeeping_${currentBookId}_recurring`, JSON.stringify(recurringRules));
+        }
+
+        function createRecurringRule(recordData, recurringOptions) {
+            const rule = {
+                id: 'recurring_' + Date.now(),
+                type: recordData.type,
+                amount: recordData.amount,
+                category: recordData.category,
+                description: recordData.description,
+                startDate: recordData.date,
+                recurringType: recurringOptions.type,
+                interval: recurringOptions.interval,
+                endDate: recurringOptions.endDate || null,
+                status: 'active',
+                lastGeneratedDate: null,
+                createdAt: new Date().toISOString()
+            };
+            
+            recurringRules.push(rule);
+            saveRecurringRules();
+            return rule;
+        }
+
+        function stopRecurringRule(ruleId) {
+            const ruleIndex = recurringRules.findIndex(r => r.id === ruleId);
+            if (ruleIndex !== -1) {
+                recurringRules[ruleIndex].status = 'stopped';
+                saveRecurringRules();
+            }
+        }
+
+        function deleteRecurringRule(ruleId) {
+            recurringRules = recurringRules.filter(r => r.id !== ruleId);
+            saveRecurringRules();
+        }
+
+        function getNextDate(currentDate, recurringType, interval) {
+            const date = new Date(currentDate);
+            
+            switch (recurringType) {
+                case 'daily':
+                    date.setDate(date.getDate() + interval);
+                    break;
+                case 'weekly':
+                    date.setDate(date.getDate() + (interval * 7));
+                    break;
+                case 'monthly':
+                    date.setMonth(date.getMonth() + interval);
+                    break;
+            }
+            
+            return date.toISOString().split('T')[0];
+        }
+
+        function generateRecurringRecords() {
+            const today = new Date().toISOString().split('T')[0];
+            let recordsGenerated = 0;
+
+            recurringRules.forEach(rule => {
+                if (rule.status !== 'active') return;
+
+                let currentDate = rule.lastGeneratedDate || rule.startDate;
+                
+                while (true) {
+                    const nextDate = getNextDate(currentDate, rule.recurringType, rule.interval);
+                    
+                    if (nextDate > today) break;
+                    if (rule.endDate && nextDate > rule.endDate) break;
+                    
+                    const newRecord = {
+                        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+                        type: rule.type,
+                        amount: rule.amount,
+                        category: rule.category,
+                        description: rule.description,
+                        date: nextDate
+                    };
+                    
+                    records.unshift(newRecord);
+                    rule.lastGeneratedDate = nextDate;
+                    recordsGenerated++;
+                    
+                    currentDate = nextDate;
+                }
+            });
+
+            if (recordsGenerated > 0) {
+                saveRecords();
+                saveRecurringRules();
+                updateSummary();
+                renderRecords();
+                updateChart();
+                updateBarChart();
+                renderBudgetOverview();
+                console.log(`自动生成了 ${recordsGenerated} 条周期性记录`);
+            }
+
+            return recordsGenerated;
+        }
+
+        function openRecurringModal() {
+            const modal = document.getElementById('recurring-modal');
+            if (modal) {
+                renderRecurringList();
+                modal.classList.add('active');
+            }
+        }
+
+        function closeRecurringModal() {
+            const modal = document.getElementById('recurring-modal');
+            if (modal) {
+                modal.classList.remove('active');
+            }
+        }
+
+        function renderRecurringList() {
+            const container = document.getElementById('recurring-list-container');
+            const emptyState = document.getElementById('recurring-empty-state');
+            
+            if (!container || !emptyState) return;
+
+            const activeRules = recurringRules.filter(r => r.status === 'active');
+            const stoppedRules = recurringRules.filter(r => r.status === 'stopped');
+
+            if (recurringRules.length === 0) {
+                container.innerHTML = '';
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+            container.innerHTML = '';
+
+            if (activeRules.length > 0) {
+                const activeHeader = document.createElement('h3');
+                activeHeader.style.cssText = 'font-size: 16px; font-weight: 600; color: #333; margin-bottom: 15px;';
+                activeHeader.textContent = '🔄 进行中的周期规则';
+                container.appendChild(activeHeader);
+
+                activeRules.forEach(rule => {
+                    const item = createRecurringRuleItem(rule);
+                    container.appendChild(item);
+                });
+            }
+
+            if (stoppedRules.length > 0) {
+                const stoppedHeader = document.createElement('h3');
+                stoppedHeader.style.cssText = 'font-size: 16px; font-weight: 600; color: #333; margin-bottom: 15px; margin-top: 30px;';
+                stoppedHeader.textContent = '⏸️ 已停止的周期规则';
+                container.appendChild(stoppedHeader);
+
+                stoppedRules.forEach(rule => {
+                    const item = createRecurringRuleItem(rule);
+                    container.appendChild(item);
+                });
+            }
+        }
+
+        function createRecurringRuleItem(rule) {
+            const item = document.createElement('div');
+            item.className = 'record-item';
+            item.style.cssText = rule.status === 'stopped' ? 'opacity: 0.7; background: #f9fafb;' : '';
+
+            const isIncome = rule.type === 'income';
+            const typeClass = isIncome ? 'income' : 'expense';
+            const icon = isIncome ? '+' : '-';
+            const amountPrefix = isIncome ? '+' : '-';
+            const typeDisplay = isIncome ? '收入' : '支出';
+            
+            let recurringText = '';
+            switch (rule.recurringType) {
+                case 'daily':
+                    recurringText = rule.interval === 1 ? '每天' : `每${rule.interval}天`;
+                    break;
+                case 'weekly':
+                    recurringText = rule.interval === 1 ? '每周' : `每${rule.interval}周`;
+                    break;
+                case 'monthly':
+                    recurringText = rule.interval === 1 ? '每月' : `每${rule.interval}月`;
+                    break;
+            }
+
+            const nextDate = rule.lastGeneratedDate 
+                ? getNextDate(rule.lastGeneratedDate, rule.recurringType, rule.interval)
+                : rule.startDate;
+
+            item.innerHTML = `
+                <div class="record-info">
+                    <div class="record-icon ${typeClass}" style="width: 36px; height: 36px; font-size: 14px;">${icon}</div>
+                    <div class="record-details">
+                        <h4 style="font-size: 14px;">${rule.description || typeDisplay} <span class="category-tag ${typeClass}">${rule.category}</span></h4>
+                        <p style="font-size: 12px; color: #888;">
+                            ${recurringText} • 开始于 ${formatDate(rule.startDate)}
+                            ${rule.endDate ? ` • 结束于 ${formatDate(rule.endDate)}` : ''}
+                            ${rule.lastGeneratedDate ? `<br>上次生成: ${formatDate(rule.lastGeneratedDate)} • 下次: ${formatDate(nextDate)}` : ''}
+                        </p>
+                    </div>
+                </div>
+                <div class="record-amount ${typeClass}" style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 16px; font-weight: 700;">${amountPrefix}${formatCurrency(rule.amount).substring(1)}</span>
+                    ${rule.status === 'active' ? `
+                        <button class="btn btn-edit" data-rule-id="${rule.id}" data-action="stop" style="padding: 6px 10px; font-size: 11px; background: #fef3c7; color: #d97706;">停止</button>
+                    ` : ''}
+                    <button class="btn btn-delete" data-rule-id="${rule.id}" data-action="delete" style="padding: 6px 10px; font-size: 11px;">删除</button>
+                </div>
+            `;
+
+            item.querySelectorAll('button').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const ruleId = btn.dataset.ruleId;
+                    const action = btn.dataset.action;
+
+                    if (action === 'stop') {
+                        if (confirm('确定要停止这个周期规则吗？停止后将不再自动生成记录。')) {
+                            stopRecurringRule(ruleId);
+                            renderRecurringList();
+                        }
+                    } else if (action === 'delete') {
+                        if (confirm('确定要删除这个周期规则吗？此操作不可撤销。')) {
+                            deleteRecurringRule(ruleId);
+                            renderRecurringList();
+                        }
+                    }
+                });
+            });
+
+            return item;
+        }
+
+        // 标签功能
+        function loadAllTags() {
+            if (!currentBookId) {
+                allTags = [];
+                return;
+            }
+            const savedTags = localStorage.getItem(`bookkeeping_${currentBookId}_tags`);
+            if (savedTags) {
+                allTags = JSON.parse(savedTags);
+            } else {
+                allTags = [];
+            }
+        }
+
+        function saveAllTags() {
+            if (!currentBookId) return;
+            localStorage.setItem(`bookkeeping_${currentBookId}_tags`, JSON.stringify(allTags));
+        }
+
+        function addTag(tagName) {
+            const trimmedTag = tagName.trim();
+            if (!trimmedTag || trimmedTag === '') return false;
+            
+            if (!allTags.includes(trimmedTag)) {
+                allTags.push(trimmedTag);
+                saveAllTags();
+            }
+            return true;
+        }
+
+        function removeTag(tagName) {
+            allTags = allTags.filter(tag => tag !== tagName);
+            saveAllTags();
+        }
+
+        function getUsedTags() {
+            const usedTags = new Set();
+            records.forEach(record => {
+                if (record.tags && Array.isArray(record.tags)) {
+                    record.tags.forEach(tag => {
+                        if (tag && tag.trim()) {
+                            usedTags.add(tag.trim());
+                        }
+                    });
+                }
+            });
+            return Array.from(usedTags);
+        }
+
+        function renderTagDropdown(filterText = '') {
+            const dropdown = document.getElementById('tags-dropdown');
+            if (!dropdown) return;
+
+            const filteredTags = allTags.filter(tag => 
+                tag.toLowerCase().includes(filterText.toLowerCase()) && 
+                !selectedTags.includes(tag)
+            );
+
+            if (filteredTags.length === 0 && (!filterText || filterText.trim() === '')) {
+                dropdown.style.display = 'none';
+                return;
+            }
+
+            dropdown.innerHTML = '';
+            dropdown.style.display = 'block';
+
+            filteredTags.forEach(tag => {
+                const item = document.createElement('div');
+                item.style.cssText = 'padding: 10px 16px; cursor: pointer; transition: background 0.2s ease;';
+                item.textContent = tag;
+                
+                item.addEventListener('mouseenter', () => {
+                    item.style.backgroundColor = '#f3f4f6';
+                });
+                item.addEventListener('mouseleave', () => {
+                    item.style.backgroundColor = 'white';
+                });
+                
+                item.addEventListener('click', () => {
+                    selectTag(tag);
+                    dropdown.style.display = 'none';
+                });
+
+                dropdown.appendChild(item);
+            });
+
+            if (filterText && filterText.trim() !== '' && !allTags.some(tag => tag.toLowerCase() === filterText.toLowerCase())) {
+                const createItem = document.createElement('div');
+                createItem.style.cssText = 'padding: 10px 16px; cursor: pointer; color: #667eea; font-weight: 500; border-top: 1px solid #e0e0e0;';
+                createItem.textContent = `创建新标签: "${filterText.trim()}"`;
+                
+                createItem.addEventListener('mouseenter', () => {
+                    createItem.style.backgroundColor = '#f3f4f6';
+                });
+                createItem.addEventListener('mouseleave', () => {
+                    createItem.style.backgroundColor = 'white';
+                });
+                
+                createItem.addEventListener('click', () => {
+                    const newTag = filterText.trim();
+                    if (newTag && !selectedTags.includes(newTag)) {
+                        addTag(newTag);
+                        selectTag(newTag);
+                    }
+                    dropdown.style.display = 'none';
+                });
+
+                dropdown.appendChild(createItem);
+            }
+        }
+
+        function selectTag(tag) {
+            if (!selectedTags.includes(tag)) {
+                selectedTags.push(tag);
+                renderSelectedTags();
+            }
+            const tagsInput = document.getElementById('tags-input');
+            if (tagsInput) {
+                tagsInput.value = '';
+            }
+        }
+
+        function deselectTag(tag) {
+            selectedTags = selectedTags.filter(t => t !== tag);
+            renderSelectedTags();
+        }
+
+        function renderSelectedTags() {
+            const container = document.getElementById('selected-tags-container');
+            if (!container) return;
+
+            container.innerHTML = '';
+
+            selectedTags.forEach(tag => {
+                const tagElement = document.createElement('span');
+                tagElement.style.cssText = 'display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 16px; font-size: 12px; font-weight: 500;';
+                
+                tagElement.innerHTML = `
+                    <span>${tag}</span>
+                    <button type="button" style="background: none; border: none; color: white; cursor: pointer; font-size: 14px; padding: 0; line-height: 1;" data-tag="${tag}">&times;</button>
+                `;
+
+                const removeBtn = tagElement.querySelector('button');
+                removeBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    deselectTag(tag);
+                });
+
+                container.appendChild(tagElement);
+            });
+        }
+
+        function clearSelectedTags() {
+            selectedTags = [];
+            renderSelectedTags();
+        }
+
+        function renderTagFilters() {
+            const tagFilterRow = document.getElementById('tag-filter-row');
+            const container = document.getElementById('tag-filters-container');
+            
+            if (!tagFilterRow || !container) return;
+
+            const usedTags = getUsedTags();
+            
+            if (usedTags.length === 0) {
+                tagFilterRow.style.display = 'none';
+                return;
+            }
+
+            tagFilterRow.style.display = 'flex';
+            container.innerHTML = '';
+
+            const allBtn = document.createElement('button');
+            allBtn.className = 'filter-btn';
+            allBtn.dataset.tag = 'all';
+            allBtn.textContent = '全部标签';
+            
+            if (currentTagFilter === 'all') {
+                allBtn.classList.add('active');
+            }
+
+            allBtn.addEventListener('click', () => {
+                currentTagFilter = 'all';
+                updateTagFilterButtons();
+                renderRecords();
+                updateChart();
+            });
+
+            container.appendChild(allBtn);
+
+            usedTags.forEach(tag => {
+                const btn = document.createElement('button');
+                btn.className = 'filter-btn';
+                btn.dataset.tag = tag;
+                btn.textContent = tag;
+                
+                if (currentTagFilter === tag) {
+                    btn.classList.add('active');
+                }
+
+                btn.addEventListener('click', () => {
+                    currentTagFilter = tag;
+                    updateTagFilterButtons();
+                    renderRecords();
+                    updateChart();
+                });
+
+                container.appendChild(btn);
+            });
+        }
+
+        function updateTagFilterButtons() {
+            const container = document.getElementById('tag-filters-container');
+            if (!container) return;
+
+            const buttons = container.querySelectorAll('.filter-btn');
+            buttons.forEach(btn => {
+                if (btn.dataset.tag === currentTagFilter) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        }
+
+        function filterByTag(records) {
+            if (currentTagFilter === 'all') {
+                return records;
+            }
+
+            return records.filter(record => {
+                if (!record.tags || !Array.isArray(record.tags)) {
+                    return false;
+                }
+                return record.tags.includes(currentTagFilter);
+            });
         }
 
         // 分类定义
@@ -2085,12 +2995,20 @@
             // 从 localStorage 加载数据
             loadRecords();
             loadBudgets();
+            loadRecurringRules();
+            loadAllTags();
 
             // 初始化预算管理事件
             initBudgetEvents();
 
             // 更新当前账本显示
             updateCurrentBookDisplay();
+
+            // 生成到期的周期性记录
+            const generatedCount = generateRecurringRecords();
+            if (generatedCount > 0) {
+                alert(`已自动生成 ${generatedCount} 条周期性记录！`);
+            }
 
             // 渲染数据
             updateSummary();
@@ -2898,8 +3816,14 @@
             const newRecord = {
                 id: Date.now().toString(),
                 ...record,
-                amount: parseFloat(record.amount)
+                amount: parseFloat(record.amount),
+                tags: record.tags ? [...record.tags] : []
             };
+            
+            if (newRecord.tags && newRecord.tags.length > 0) {
+                newRecord.tags.forEach(tag => addTag(tag));
+            }
+            
             records.unshift(newRecord);
             saveRecords();
             updateSummary();
@@ -3031,8 +3955,13 @@
             records[recordIndex] = {
                 ...records[recordIndex],
                 ...updatedData,
-                amount: parseFloat(updatedData.amount)
+                amount: parseFloat(updatedData.amount),
+                tags: updatedData.tags ? [...updatedData.tags] : records[recordIndex].tags
             };
+
+            if (records[recordIndex].tags && records[recordIndex].tags.length > 0) {
+                records[recordIndex].tags.forEach(tag => addTag(tag));
+            }
 
             saveRecords();
             updateSummary();
@@ -3168,6 +4097,9 @@
 
             // 渲染分类筛选按钮（总是渲染，基于所有记录的可用分类）
             renderCategoryFilters();
+            
+            // 渲染标签筛选按钮
+            renderTagFilters();
 
             // 筛选记录
             let filteredRecords = records;
@@ -3181,6 +4113,9 @@
             if (currentCategory !== 'all') {
                 filteredRecords = filteredRecords.filter(record => record.category === currentCategory);
             }
+
+            // 按标签筛选
+            filteredRecords = filterByTag(filteredRecords);
 
             // 按日期范围筛选
             filteredRecords = filterByDateRange(filteredRecords);
@@ -3317,11 +4252,18 @@
             const description = record.description || (isIncome ? '收入' : '支出');
             const category = record.category || (isIncome ? '其他收入' : '其他支出');
 
+            let tagsHtml = '';
+            if (record.tags && Array.isArray(record.tags) && record.tags.length > 0) {
+                tagsHtml = record.tags.map(tag => 
+                    `<span class="tag-badge" style="display: inline-block; padding: 2px 8px; background: #e0e7ff; color: #4f46e5; border-radius: 12px; font-size: 11px; font-weight: 500; margin-left: 4px;">${tag}</span>`
+                ).join('');
+            }
+
             item.innerHTML = `
                 <div class="record-info">
                     <div class="record-icon ${typeClass}">${icon}</div>
                     <div class="record-details">
-                        <h4>${description}<span class="category-tag ${typeClass}">${category}</span></h4>
+                        <h4>${description}<span class="category-tag ${typeClass}">${category}</span>${tagsHtml}</h4>
                         <p>${formatDate(record.date)}</p>
                     </div>
                 </div>
@@ -4093,6 +5035,127 @@
             exportCsvBtn.addEventListener('click', exportToCSV);
         }
 
+        // 导入CSV按钮
+        const importCsvBtn = document.getElementById('import-csv-btn');
+        if (importCsvBtn) {
+            importCsvBtn.addEventListener('click', openImportModal);
+        }
+
+        // 导入弹窗关闭按钮
+        const importCloseBtn = document.getElementById('import-close');
+        if (importCloseBtn) {
+            importCloseBtn.addEventListener('click', closeImportModal);
+        }
+
+        // 取消导入按钮
+        const cancelImportBtn = document.getElementById('cancel-import-btn');
+        if (cancelImportBtn) {
+            cancelImportBtn.addEventListener('click', closeImportModal);
+        }
+
+        // 确认导入按钮
+        const confirmImportBtn = document.getElementById('confirm-import-btn');
+        if (confirmImportBtn) {
+            confirmImportBtn.addEventListener('click', confirmImport);
+        }
+
+        // CSV文件选择
+        const csvFileInput = document.getElementById('csv-file-input');
+        if (csvFileInput) {
+            csvFileInput.addEventListener('change', handleFileSelect);
+        }
+
+        // 点击导入弹窗外部关闭
+        const importModal = document.getElementById('import-csv-modal');
+        if (importModal) {
+            importModal.addEventListener('click', (e) => {
+                if (e.target === importModal) {
+                    closeImportModal();
+                }
+            });
+        }
+
+        // 周期性记录管理按钮
+        const manageRecurringBtn = document.getElementById('manage-recurring-btn');
+        if (manageRecurringBtn) {
+            manageRecurringBtn.addEventListener('click', openRecurringModal);
+        }
+
+        // 周期性记录弹窗关闭按钮
+        const recurringCloseBtn = document.getElementById('recurring-close');
+        if (recurringCloseBtn) {
+            recurringCloseBtn.addEventListener('click', closeRecurringModal);
+        }
+
+        // 点击周期性记录弹窗外部关闭
+        const recurringModal = document.getElementById('recurring-modal');
+        if (recurringModal) {
+            recurringModal.addEventListener('click', (e) => {
+                if (e.target === recurringModal) {
+                    closeRecurringModal();
+                }
+            });
+        }
+
+        // 周期性记录选项显示/隐藏
+        const isRecurringCheckbox = document.getElementById('is-recurring');
+        if (isRecurringCheckbox) {
+            isRecurringCheckbox.addEventListener('change', () => {
+                const recurringOptions = document.getElementById('recurring-options');
+                if (recurringOptions) {
+                    recurringOptions.style.display = isRecurringCheckbox.checked ? 'block' : 'none';
+                }
+            });
+        }
+
+        // 标签输入事件
+        const tagsInput = document.getElementById('tags-input');
+        if (tagsInput) {
+            tagsInput.addEventListener('input', () => {
+                const value = tagsInput.value;
+                if (value) {
+                    renderTagDropdown(value);
+                } else {
+                    const dropdown = document.getElementById('tags-dropdown');
+                    if (dropdown) {
+                        dropdown.style.display = 'none';
+                    }
+                }
+            });
+
+            tagsInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const value = tagsInput.value.trim();
+                    if (value && !selectedTags.includes(value)) {
+                        addTag(value);
+                        selectTag(value);
+                    }
+                    const dropdown = document.getElementById('tags-dropdown');
+                    if (dropdown) {
+                        dropdown.style.display = 'none';
+                    }
+                }
+            });
+
+            tagsInput.addEventListener('focus', () => {
+                if (tagsInput.value) {
+                    renderTagDropdown(tagsInput.value);
+                } else {
+                    renderTagDropdown('');
+                }
+            });
+
+            tagsInput.addEventListener('blur', () => {
+                setTimeout(() => {
+                    const dropdown = document.getElementById('tags-dropdown');
+                    if (dropdown) {
+                        dropdown.style.display = 'none';
+                    }
+                }, 200);
+            });
+        }
+
         // 表单提交
         recordForm.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -4122,8 +5185,27 @@
                 amount: amount,
                 category: category,
                 description: description,
-                date: date
+                date: date,
+                tags: selectedTags.length > 0 ? [...selectedTags] : []
             };
+
+            // 检查是否设置为周期性记录
+            const isRecurring = document.getElementById('is-recurring').checked;
+            
+            if (isRecurring) {
+                const recurringType = document.getElementById('recurring-type').value;
+                const recurringInterval = parseInt(document.getElementById('recurring-interval').value) || 1;
+                const recurringEndDate = document.getElementById('recurring-end-date').value || null;
+
+                // 创建周期性规则
+                createRecurringRule(record, {
+                    type: recurringType,
+                    interval: recurringInterval,
+                    endDate: recurringEndDate
+                });
+
+                alert('周期性记录规则已创建！记录将按设定的周期自动生成。');
+            }
 
             addRecord(record);
 
@@ -4133,6 +5215,15 @@
             currentType = 'income';
             updateTypeButtons();
             updateCategoryOptions();
+            
+            // 重置周期性选项
+            const recurringOptions = document.getElementById('recurring-options');
+            if (recurringOptions) {
+                recurringOptions.style.display = 'none';
+            }
+            
+            // 重置标签选择
+            clearSelectedTags();
         });
 
         // 类型切换按钮
