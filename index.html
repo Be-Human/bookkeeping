@@ -23,12 +23,43 @@
             margin: 0 auto;
         }
 
+        .header-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .header-section {
+                flex-direction: column;
+                gap: 20px;
+            }
+        }
+
         h1 {
             text-align: center;
             color: white;
-            margin-bottom: 30px;
+            margin: 0;
             font-weight: 600;
             text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .btn-export {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            width: auto;
+            padding: 12px 24px;
+            text-transform: none;
+            letter-spacing: normal;
+            font-size: 14px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-export:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
         }
 
         .summary-cards {
@@ -1014,7 +1045,10 @@
 </head>
 <body>
     <div class="container">
-        <h1>💰 个人记账应用</h1>
+        <div class="header-section">
+            <h1>💰 个人记账应用</h1>
+            <button class="btn btn-export" id="export-csv-btn">📥 导出 CSV</button>
+        </div>
 
         <!-- 汇总卡片 -->
         <div class="summary-cards">
@@ -1240,6 +1274,97 @@
 
         // 预算管理
         let budgets = {};
+
+        // 导出CSV功能
+        function exportToCSV() {
+            // 获取当前筛选后的记录
+            let filteredRecords = records;
+            
+            // 先按类型筛选
+            if (currentFilter !== 'all') {
+                filteredRecords = filteredRecords.filter(record => record.type === currentFilter);
+            }
+
+            // 再按分类筛选
+            if (currentCategory !== 'all') {
+                filteredRecords = filteredRecords.filter(record => record.category === currentCategory);
+            }
+
+            // 按日期范围筛选
+            filteredRecords = filterByDateRange(filteredRecords);
+
+            // 最后按关键词筛选
+            filteredRecords = filterByKeyword(filteredRecords);
+
+            if (filteredRecords.length === 0) {
+                alert('没有可导出的记录');
+                return;
+            }
+
+            // 定义CSV表头
+            const headers = ['日期', '类型', '分类', '描述', '金额'];
+
+            // 构建CSV内容
+            let csvContent = headers.join(',') + '\n';
+
+            // 处理每条记录
+            filteredRecords.forEach(record => {
+                // 处理类型显示
+                const typeDisplay = record.type === 'income' ? '收入' : '支出';
+                
+                // 处理描述（如果为空则显示默认值）
+                const description = record.description || '';
+                
+                // 处理金额（保留两位小数）
+                const amount = record.amount.toFixed(2);
+
+                // 构建行数据，处理可能包含逗号的字段
+                const row = [
+                    escapeCSVField(record.date),
+                    escapeCSVField(typeDisplay),
+                    escapeCSVField(record.category || ''),
+                    escapeCSVField(description),
+                    amount
+                ];
+
+                csvContent += row.join(',') + '\n';
+            });
+
+            // 生成文件名（包含当前日期）
+            const today = new Date();
+            const dateStr = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
+            const fileName = `记账记录_${dateStr}.csv`;
+
+            // 创建Blob对象
+            const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+
+            // 创建下载链接
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', fileName);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        // 转义CSV字段（处理包含逗号、引号或换行符的字段）
+        function escapeCSVField(field) {
+            if (field === null || field === undefined) {
+                return '';
+            }
+            
+            const fieldStr = String(field);
+            
+            // 如果字段包含逗号、引号或换行符，需要用引号包裹并转义内部的引号
+            if (fieldStr.includes(',') || fieldStr.includes('"') || fieldStr.includes('\n') || fieldStr.includes('\r')) {
+                return '"' + fieldStr.replace(/"/g, '""') + '"';
+            }
+            
+            return fieldStr;
+        }
 
         // 分类定义
         const categories = {
@@ -2794,6 +2919,12 @@
         }
 
         // 事件监听
+
+        // 导出CSV按钮
+        const exportCsvBtn = document.getElementById('export-csv-btn');
+        if (exportCsvBtn) {
+            exportCsvBtn.addEventListener('click', exportToCSV);
+        }
 
         // 表单提交
         recordForm.addEventListener('submit', (e) => {
