@@ -1389,6 +1389,125 @@
         .edit-book-buttons .btn {
             flex: 1;
         }
+
+        /* 删除账本确认弹窗 */
+        .delete-book-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1001;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .delete-book-modal.active {
+            display: flex;
+        }
+
+        .delete-book-container {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        }
+
+        .delete-book-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .delete-book-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .delete-book-close {
+            background: none;
+            border: none;
+            font-size: 20px;
+            color: #999;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .delete-book-close:hover {
+            color: #666;
+        }
+
+        .delete-book-content {
+            margin-bottom: 20px;
+        }
+
+        .delete-book-warning {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .delete-book-warning-icon {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .delete-book-warning-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #dc2626;
+            margin-bottom: 8px;
+        }
+
+        .delete-book-warning-text {
+            font-size: 13px;
+            color: #7f1d1d;
+            line-height: 1.5;
+        }
+
+        .delete-book-name {
+            font-weight: 600;
+            color: #dc2626;
+        }
+
+        .delete-book-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .delete-book-buttons .btn {
+            flex: 1;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        /* 账本名称错误提示 */
+        .book-name-error {
+            display: none;
+            color: #ef4444;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+
+        .book-name-error.show {
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -1659,6 +1778,7 @@
                 <div class="form-group">
                     <label for="edit-book-name">账本名称</label>
                     <input type="text" id="edit-book-name" placeholder="请输入账本名称" required>
+                    <div class="book-name-error" id="edit-book-name-error">账本名称已存在</div>
                 </div>
                 <div class="edit-book-buttons">
                     <button type="submit" class="btn btn-primary">保存</button>
@@ -1668,10 +1788,38 @@
         </div>
     </div>
 
+    <!-- 删除账本确认弹窗 -->
+    <div id="delete-book-modal" class="delete-book-modal">
+        <div class="delete-book-container">
+            <div class="delete-book-header">
+                <h3 class="delete-book-title">⚠️ 确认删除</h3>
+                <button class="delete-book-close" id="delete-book-close">&times;</button>
+            </div>
+            <div class="delete-book-content">
+                <div class="delete-book-warning">
+                    <div class="delete-book-warning-icon">⚠️</div>
+                    <div class="delete-book-warning-title">此操作不可撤销</div>
+                    <div class="delete-book-warning-text">
+                        确定要删除账本 <span class="delete-book-name" id="delete-book-name-display">默认账本</span> 吗？
+                        <br><br>
+                        <strong>删除后：</strong>
+                        <br>• 该账本的所有记录将被永久删除
+                        <br>• 该账本的所有预算设置将被永久删除
+                    </div>
+                </div>
+            </div>
+            <div class="delete-book-buttons">
+                <button type="button" class="btn btn-danger" id="confirm-delete-book">确认删除</button>
+                <button type="button" class="btn" id="cancel-delete-book" style="background: #f3f4f6; color: #333;">取消</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // 账本管理
         let books = [];
         let currentBookId = null;
+        let pendingDeleteBookId = null;
 
         // 数据管理
         let records = [];
@@ -2104,10 +2252,25 @@
             }
         }
 
+        // 检查账本名称是否已存在
+        function isBookNameExists(name, excludeBookId = null) {
+            const trimmedName = name.trim();
+            return books.some(book => 
+                book.name.trim().toLowerCase() === trimmedName.toLowerCase() && 
+                book.id !== excludeBookId
+            );
+        }
+
         // 创建新账本
         function createBook(name) {
             if (!name || name.trim() === '') {
                 alert('请输入账本名称');
+                return false;
+            }
+
+            // 检查名称是否已存在
+            if (isBookNameExists(name)) {
+                alert('账本名称已存在，请使用其他名称');
                 return false;
             }
 
@@ -2165,8 +2328,8 @@
             closeBookListModal();
         }
 
-        // 删除账本
-        function deleteBook(bookId) {
+        // 打开删除账本确认弹窗
+        function openDeleteBookModal(bookId) {
             const book = books.find(b => b.id === bookId);
             if (!book) return;
 
@@ -2176,29 +2339,79 @@
                 return;
             }
 
-            if (confirm(`确定要删除账本「${book.name}」吗？该账本的所有记录和预算数据将被永久删除。`)) {
-                // 从账本列表中移除
-                books = books.filter(b => b.id !== bookId);
-                saveBooks();
+            // 保存待删除的账本ID
+            pendingDeleteBookId = bookId;
 
-                // 删除该账本的数据
-                localStorage.removeItem(`bookkeeping_${bookId}_records`);
-                localStorage.removeItem(`bookkeeping_${bookId}_budgets`);
-
-                // 如果删除的是当前账本，切换到第一个账本
-                if (currentBookId === bookId && books.length > 0) {
-                    switchBook(books[0].id);
-                } else {
-                    // 重新渲染账本列表
-                    renderBookList();
-                }
+            // 更新弹窗中的账本名称
+            const nameDisplay = document.getElementById('delete-book-name-display');
+            if (nameDisplay) {
+                nameDisplay.textContent = book.name;
             }
+
+            // 关闭账本列表弹窗
+            closeBookListModal();
+
+            // 打开删除确认弹窗
+            const modal = document.getElementById('delete-book-modal');
+            if (modal) {
+                modal.classList.add('active');
+            }
+        }
+
+        // 确认删除账本
+        function confirmDeleteBook() {
+            if (!pendingDeleteBookId) return;
+
+            const bookId = pendingDeleteBookId;
+            const book = books.find(b => b.id === bookId);
+
+            // 从账本列表中移除
+            books = books.filter(b => b.id !== bookId);
+            saveBooks();
+
+            // 删除该账本的数据
+            localStorage.removeItem(`bookkeeping_${bookId}_records`);
+            localStorage.removeItem(`bookkeeping_${bookId}_budgets`);
+
+            // 关闭删除确认弹窗
+            closeDeleteBookModal();
+
+            // 重置待删除的账本ID
+            pendingDeleteBookId = null;
+
+            // 如果删除的是当前账本，切换到第一个账本
+            if (currentBookId === bookId && books.length > 0) {
+                switchBook(books[0].id);
+            } else {
+                // 重新渲染账本列表
+                renderBookList();
+            }
+        }
+
+        // 关闭删除账本确认弹窗
+        function closeDeleteBookModal() {
+            const modal = document.getElementById('delete-book-modal');
+            if (modal) {
+                modal.classList.remove('active');
+            }
+            pendingDeleteBookId = null;
+        }
+
+        // 删除账本（已废弃，保留兼容）
+        function deleteBook(bookId) {
+            openDeleteBookModal(bookId);
         }
 
         // 编辑账本名称
         function editBook(bookId, newName) {
             if (!newName || newName.trim() === '') {
                 alert('请输入账本名称');
+                return false;
+            }
+
+            // 检查名称是否已存在（排除当前编辑的账本）
+            if (isBookNameExists(newName, bookId)) {
+                alert('账本名称已存在，请使用其他名称');
                 return false;
             }
 
@@ -2306,7 +2519,7 @@
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     const bookId = btn.dataset.bookId;
-                    deleteBook(bookId);
+                    openDeleteBookModal(bookId);
                 });
             });
         }
@@ -2448,6 +2661,34 @@
                         }
                     }
                 });
+            }
+
+            // 删除账本确认弹窗关闭按钮
+            const deleteBookClose = document.getElementById('delete-book-close');
+            if (deleteBookClose) {
+                deleteBookClose.addEventListener('click', closeDeleteBookModal);
+            }
+
+            // 取消删除账本
+            const cancelDeleteBook = document.getElementById('cancel-delete-book');
+            if (cancelDeleteBook) {
+                cancelDeleteBook.addEventListener('click', closeDeleteBookModal);
+            }
+
+            // 点击删除账本弹窗外部关闭
+            const deleteBookModal = document.getElementById('delete-book-modal');
+            if (deleteBookModal) {
+                deleteBookModal.addEventListener('click', (e) => {
+                    if (e.target === deleteBookModal) {
+                        closeDeleteBookModal();
+                    }
+                });
+            }
+
+            // 确认删除账本
+            const confirmDeleteBtn = document.getElementById('confirm-delete-book');
+            if (confirmDeleteBtn) {
+                confirmDeleteBtn.addEventListener('click', confirmDeleteBook);
             }
         }
 
